@@ -44,15 +44,17 @@ class DQN:
         # memory for 1-step Learning
         self.beta = beta
         self.prior_eps = prior_eps
-        self.memory = PrioritizedReplayBuffer(obs_dim, memory_size, batch_size, alpha=alpha)
+        self.memory = PrioritizedReplayBuffer(self.state_size, self.memory_size, self.batch_size, alpha=self.alpha)
         
         # memory for N-step Learning
-        self.memory_n = ReplayBuffer(obs_dim, memory_size, batch_size, n_step=n_step, gamma=gamma)
+        self.memory_n = ReplayBuffer(self.state_size, self.memory_size, self.batch_size, n_step=self.n_step, gamma=self.gamma)
         
-        self.model = DuelModel(self.state_size, self.action_size)
-        self.target_model = DuelModel(self.state_size, self.action_size)
+        self.model = DuelModel(self.state_size, self.action_size, self.atom_size)
+        self.target_model = DuelModel(self.state_size, self.action_size, self.atom_size)
         
         self.update_target_model()
+        
+        self.transition = list()
         
         self.frame_cnt = 0
         self.optimizer = tf.keras.optimizers.Adam()
@@ -68,30 +70,33 @@ class DQN:
     
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
-        
-    def train_minibatch(self, X, Y):
-        # mini batch를 받아 policy를 update
-        
-        with tf.GradientTape() as tape:
-            loss = tf.math.reduce_mean(tf.square(Y - self.model(X)))
-        model_vars = self.model.trainable_variables
-        grad = tape.gradient(loss, model_vars)
-        self.optimizer.apply_gradients(zip(grad, model_vars))
-        
-    def update_epsilon(self):
-        # Exploration 시 사용할 epsilon 값을 업데이트
-        
-        if self.eps > self.eps_min:
-            self.eps *= self.eps_decay
-        
-        return
     
-    def update_buffer(self, state, action, reward, next_state, done):
-        self.buffer_dict['state'].append(state)
-        self.buffer_dict['action'].append(action)
-        self.buffer_dict['reward'].append(reward)
-        self.buffer_dict['next_state'].append(next_state)
-        self.buffer_dict['done'].append(int(done))
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.float64, bool]:
+        """Take an action and return the response of the env."""
+        next_state, reward, done, _ = self.env.step(action)
+
+        self.transition += [reward, next_state, done]
+
+        # N-step transition
+        one_step_transition = self.memory_n.store(*self.transition)
+
+        # add a single step transition
+        self.memory.store(*one_step_transition)
+    
+        return next_state, reward, done
+    
+    def select_action(self, state: np.ndarray) -> np.ndarray:
+        """Select an action from the input state."""
+        # NoisyNet: no epsilon greedy action selection
+        dist = self.dqn(state)
+        
+        action = tf.math.reduce_sum(dist * self.support, dim=2).numpy().argmax()
+        
+        selected_action = selected_action.detach().cpu().numpy()
+        
+        self.transition = [state, selected_action]
+        
+        return selected_action
     
     def update_model(self) -> torch.Tensor:
         """Update the model by gradient descent."""
@@ -129,13 +134,10 @@ class DQN:
         grad = tape.gradient(loss, model_weights)
         self.optimizer.apply_gradients(zip(grad, model_weights))
         
-        
         # PER: update priorities
         loss_for_prior = elementwise_loss.numpy()
         new_priorities = loss_for_prior + self.prior_eps
         self.memory.update_priorities(indices, new_priorities)
-
-        return loss.item()
     
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray], gamma: float) -> torch.Tensor:
         """Return categorical dqn loss."""
@@ -188,39 +190,6 @@ class DQN:
 
         return elementwise_loss
     
-    def make_minibatch(self,buffer_dict):
-        bsize = self.mini_batch_size
-        batch_idx = np.random.choice(list(range(len(buffer_dict['state'])-(self.n_steps-1))), bsize, replace=False)
-            
-        states = np.array(buffer_dict['state'])[batch_idx]
-        actions = np.array(buffer_dict['action'])[batch_idx]
-        if self.multistep:
-            rewards_arr = np.zeros((bsize,self.n_steps))
-            gamma_arr = np.ones((self.n_steps,))
-            for i in range(self.n_steps):
-                rewards_arr[:,i] = np.array(buffer_dict['reward'])[batch_idx+i]
-                if i > 0:
-                    gamma_arr[i] = self.gamma * gamma_arr[i-1]
-            
-            rewards = (rewards_arr * gamma_arr).sum(axis=1)
-            
-        else:
-            rewards = np.array(buffer_dict['reward'])[batch_idx]
-        next_states = np.array(buffer_dict['next_state'])[batch_idx + (self.n_steps-1)]
-        dones = np.array(buffer_dict['done'])[batch_idx]
-        
-        # Double
-        action_target = self.model(states).numpy()
-        action_max = np.argmax(action_target, axis=1)
-        
-        q_value = self.target_model(next_states).numpy()[np.arange(bsize), action_max]
-        q_target_out = rewards + (self.gamma ** self.n_steps) * q_value
-        target = q_target_out * (1-dones) + rewards * (dones)
-        action_target[np.arange(bsize), actions] = target
-        
-        X, Y = states, action_target
-        
-        return X, Y
 
 env = gym.make('PongDuel-v0')
 
@@ -285,51 +254,3 @@ for ep_i in range(10000):
     
     if (ep_i+1) % 10000 == 0:
         turn ^= 1
-        
-        
-        
-# l_x, l_y = int(next_state[0][0] * 40), int(next_state[0][1] * 30)
-        
-# r_x, r_y = int(next_state[1][0] * 40), int(next_state[1][1] * 30)
-
-# ball_x, ball_y = int(next_state[0][2] * 40), int(next_state[0][3] * 30) 
-
-# if l_dist == 0:
-#     print(ball_x, ball_y)
-
-# l_dist = np.min([abs(ball_x-l_x) + abs(ball_y-l_y), 
-#                  abs(ball_x-l_x+1) + abs(ball_y-l_y), 
-#                  abs(ball_x-l_x-1) + abs(ball_y-l_y)])
-
-# r_dist = np.min([abs(ball_x-r_x) + abs(ball_y-r_y), 
-#                  abs(ball_x-r_x+1) + abs(ball_y-r_y), 
-#                  abs(ball_x-r_x-1) + abs(ball_y-r_y)])
-
-# l_idx = int(l_dist/2)
-# r_idx = int(r_dist/2)
-
-# #         l_reward, r_reward = reward_arr[l_idx], reward_arr[r_idx]
-# l_reward, r_reward = reward_fn(l_idx), reward_fn(r_idx)
-
-# l_edge_dist = np.min([abs(ball_x-l_x), abs(ball_x-l_x+1), abs(ball_x-l_x-1)])
-# r_edge_dist = np.min([abs(ball_x-r_x), abs(ball_x-r_x+1), abs(ball_x-r_x-1)])
-
-# if l_edge_dist > abs(ball_y - l_y):
-#     l_reward = 0
-# if r_edge_dist > abs(ball_y - r_y):
-#     r_reward = 0
-
-
-# if l_dist == 0:
-#     l_reward = 200
-#     print('Hit!', l_x, l_y, ball_x, ball_y)
-# if r_dist == 0:
-#     r_reward = 200
-# if reward_n[0] == 1:
-#     l_reward = 0
-#     r_reward = -400
-# if reward_n[1] == 1:
-#     l_reward = -400
-#     r_reward = 0
-
-# reward_n = [l_reward, r_reward]
