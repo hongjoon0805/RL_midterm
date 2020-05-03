@@ -47,7 +47,7 @@ class DuelModel(tf.keras.models.Model):
 
     def call(self, x):
         feature = tf.nn.relu(self.fc1(x))
-        feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=ft.float64)
+        feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
         value = tf.nn.relu(self.vfc1(feature))
         value = tf.reshape(self.vfc2(value), [-1,1,self.atom])
