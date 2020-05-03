@@ -7,15 +7,15 @@ class NoisyLinear(tf.keras.layers.Layer):
 
     def __init__(self, input_dim=32, units=32):
         super(NoisyLinear, self).__init__()
-        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True)
+        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True, dtype=tf.float64)
         self.w_sigma = self.add_weight(shape=(input_dim, units),
                                        initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True)
+                                       trainable=True, dtype=tf.float64)
         
-        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True)
+        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True, dtype=tf.float64)
         self.b_sigma = self.add_weight(shape=(units,),
                                        initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True)
+                                       trainable=True, dtype=tf.float64)
 
     
     def call(self, inputs):
