@@ -264,6 +264,8 @@ class DQN:
 env = gym.make('PongDuel-v0')
 dqn = [DQN('l', False), DQN('r', True)]
 
+f = open('log.txt', 'w')
+
 turn = 0
 
 last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
@@ -315,3 +317,10 @@ for ep_i in range(episodes):
                                                                   rewards_cnt[1],                                  
                                                                   np.mean(last_100_episode[0]), 
                                                                   np.mean(last_100_episode[1]),))
+    
+    f.write('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f\n'%(ep_i, 
+                                                                  rewards_cnt[0], 
+                                                                  rewards_cnt[1],                                  
+                                                                  np.mean(last_100_episode[0]), 
+                                                                  np.mean(last_100_episode[1]),))
+f.close()
