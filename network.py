@@ -35,10 +35,10 @@ class DuelModel(tf.keras.models.Model):
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
         self.vfc1 = NoisyLinear(128, 32)
-        self.vfc2 = NoisyLinear(32, action*atom)
+        self.vfc2 = NoisyLinear(32, 1*atom)
         
         self.afc1 = NoisyLinear(128, 32)
-        self.afc2 = NoisyLinear(32, 1*atom)
+        self.afc2 = NoisyLinear(32, action*atom)
         
         self.state = state
         self.action = action
@@ -57,6 +57,6 @@ class DuelModel(tf.keras.models.Model):
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
         dist = tf.nn.softmax(output, axis=-1)
-        dist = tf.clip_by_value(1e-3, 1e8)
+        dist = tf.clip_by_value(dist,1e-3, 1e8)
         
         return dist

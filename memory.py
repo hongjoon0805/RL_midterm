@@ -1,9 +1,10 @@
 import sys
 import math
 import os
+import operator
 import random
 from collections import deque
-from typing import Deque, Dict, List, Tuple
+from typing import Deque, Dict, List, Tuple, Callable
 
 import gym
 import matplotlib.pyplot as plt
