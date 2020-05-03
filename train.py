@@ -277,7 +277,7 @@ for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
     env.seed(ep_i)
     state = np.array(env.reset())
-    rewards_cnt = np.array([0,0])
+    rewards_cnt = np.array([0,0], dtype=np.float64)
 
     if frame_cnt > num_frames:
         break
@@ -285,7 +285,7 @@ for ep_i in range(episodes):
     while not all(done_n): 
         action = [dqn[0].select_action(state[0].reshape(1,10)), dqn[1].select_action(state[1].reshape(1,10))]
         next_state_n, reward_n, done_n, info = env.step(action)
-        next_state_n = np.array(next_state_n, dtype=np.float32)
+        next_state_n = np.array(next_state_n, dtype=np.float64)
         if all(done_n):
             ball_x, ball_y = next_state_n[0][2:4]
             if ball_y < 0.5:
