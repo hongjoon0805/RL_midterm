@@ -145,11 +145,11 @@ class DQN:
         proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist), dtype=tf.float64), [-1])
         
         proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(l + offset, [-1]),
+                                             tf.reshape(l + offset, [-1,1]),
                                              tf.reshape(next_dist * (tf.cast(u, tf.float64) - b), [-1]))
 
         proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(u + offset, [-1]),
+                                             tf.reshape(u + offset, [-1,1]),
                                              tf.reshape(next_dist * (b - tf.cast(l, tf.float64)), [-1]))
         
         proj_dist = tf.reshape(proj_dist, tf.shape(next_dist))
