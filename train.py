@@ -123,7 +123,7 @@ class DQN:
 
         # Double DQN
         dist = self.model(next_state)
-        q = tf.math.reduce_sum(dist, axis=2)
+        q = tf.math.reduce_sum(dist * self.support, axis=2)
         next_action = tf.math.argmax(q, axis=1)
         next_dist = self.target_model(next_state)
         
