@@ -31,7 +31,8 @@ class DQN:
         
         # PER parameters
         self.alpha = 0.2
-        self.beta = 0.6
+        self.beta = 0.4
+        self.d_beta = 1e-4
         self.prior_eps = 1e-6
         
         # Categorical DQN parameters
@@ -43,6 +44,9 @@ class DQN:
         # N-step Learning
         self.n_step = 3
         
+        # Noisy Netowkr
+        self.std = 0.2
+        
         # PER
         # memory for 1-step Learning
         self.memory = PrioritizedReplayBuffer(self.state_size, self.memory_size, self.batch_size, alpha=self.alpha)
@@ -50,8 +54,8 @@ class DQN:
         # memory for N-step Learning
         self.memory_n = ReplayBuffer(self.state_size, self.memory_size, self.batch_size, n_step=self.n_step, gamma=self.gamma)
         
-        self.model = DuelModel(self.state_size, self.action_size, self.atom_size)
-        self.target_model = DuelModel(self.state_size, self.action_size, self.atom_size)
+        self.model = DuelModel(self.state_size, self.action_size, self.atom_size, std = self.std)
+        self.target_model = DuelModel(self.state_size, self.action_size, self.atom_size, std = self.std)
         
         self.update_target_model()
         
@@ -194,6 +198,9 @@ class DQN:
     
         return next_state, reward, done
     
+    def increment_beta(self):
+        self.beta = min(self.beta + self.d_beta, 1.0)
+    
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # NoisyNet: no epsilon greedy action selection
@@ -209,56 +216,6 @@ class DQN:
         self.transition = [state, selected_action]
         
         return selected_action
-    
-#     def train(self, episodes: int):
-#         """Train the agent."""
-        
-#         state = self.env.reset()
-#         frame_cnt = 0
-#         num_frames = 5e6
-#         for ep_i in range(episodes):
-#             done_n = [False for _ in range(self.env.n_agents)]
-#             self.env.seed(ep_i)
-#             state = np.array(self.env.reset())
-#             rewards_cnt = np.array([0,0])
-            
-#             if frame_cnt > num_frames:
-#                 break
-
-#             while not all(done_n): 
-#                 action = self.select_action(state)
-#                 next_state, reward, done = self.step(action)
-#                 state = next_state
-                
-#                 # PER: increase beta
-#                 fraction = min(frame_cnt / num_frames, 1.0)
-#                 self.beta = self.beta + fraction * (1.0 - self.beta)
-
-#                 rewards_cnt[0] += reward_n[0]
-#                 rewards_cnt[1] += reward_n[1]
-                
-#                 # if training is ready
-#                 if len(self.memory) >= self.batch_size:
-#                     self.update_model()
-                    
-#                 frame_cnt += 1
-                
-
-#             self.update_target_model()
-
-#             last_100_episode[0].append(rewards_cnt[0])
-#             last_100_episode[1].append(rewards_cnt[1])
-
-
-#             print('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f'%(ep_i, 
-#                                                                           rewards_cnt[0], 
-#                                                                           rewards_cnt[1],                                  
-#                                                                           np.mean(last_100_episode[0]), 
-#                                                                           np.mean(last_100_episode[1]),))
-            
-
-                
-#         self.env.close()
     
 
 env = gym.make('PongDuel-v0')
@@ -302,10 +259,12 @@ for ep_i in range(episodes):
         # if training is ready
         if len(dqn[turn].memory) >= dqn[turn].batch_size:
             dqn[turn].update_model()
+            dqn[turn].increment_beta()
 
         frame_cnt += 1
 
-
+    dqn[turn].model.reset_noise()
+    dqn[turn].target_model.reset_noise()
     dqn[turn].update_target_model()
 
     last_100_episode[0].append(rewards_cnt[0])
