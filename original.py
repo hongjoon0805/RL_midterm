@@ -185,7 +185,7 @@ turn = 0
 
 last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
 
-def _cal_reward(self, state, reward):
+def _cal_reward(state, reward):
     bar_x, bar_y = state[:2]
     ball_x, ball_y = state[2:4]
     ball_radius = 0.025
