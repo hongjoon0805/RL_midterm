@@ -75,32 +75,23 @@ class DQN:
         weights = samples["weights"].reshape(-1, 1)
         indices = samples["indices"]
         
+        
         # N-step Learning loss
         # we are gonna combine 1-step loss and n-step loss so as to
         # prevent high-variance. The original rainbow employs n-step loss only.
         
-        gamma = self.gamma ** self.n_step
-        samples = self.memory_n.sample_batch_from_idxs(indices)
-        
-        state = samples["obs"]
-        next_state = samples["next_obs"]
-        action = samples["acts"]
-        reward = samples["rews"].reshape(-1, 1)
-        done = samples["done"].reshape(-1, 1)
-        
-        # Categorical DQN algorithm
-        delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
-        
         with tf.GradientTape() as tape:
-            
+            # 1-step loss
             elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
+            gamma = self.gamma ** self.n_step
+            samples = self.memory_n.sample_batch_from_idxs(indices)
             elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
             elementwise_loss += elementwise_loss_n_loss
             
+            # PER: importance sampling before average
             loss = tf.math.reduce_mean(elementwise_loss * weights)
         
         model_weights = self.model.trainable_variables
-        # PER: importance sampling before average
         grad = tape.gradient(loss, model_weights)
         self.optimizer.apply_gradients(zip(grad, model_weights))
         
