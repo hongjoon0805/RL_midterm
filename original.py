@@ -213,7 +213,7 @@ for ep_i in range(10000):
         next_state = np.array(next_state)
         
         if all(done_n):
-            ball_x, ball_y = next_state_n[0][2:4]
+            ball_x, ball_y = next_state[0][2:4]
             if ball_y < 0.5:
                 reward_n[0] += 1
             else:
