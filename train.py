@@ -14,7 +14,6 @@ from typing import Deque, Dict, List, Tuple, Callable
 from network import DuelModel
 tf.keras.backend.set_floatx('float64')
     
-# 지하철 안에서 distributional + per 까지 모두 짜보자. 디버깅을 빠르게 진행해야함
 # rainbow 구현 모두 끝나면 reward 체계를 바꿔보자. bar에 닿는 횟수가 매우 적으니, bar에 닿을 때 마다 reward를 100정도 얻을 수 있게 해보자.
 class DQN:
     def __init__(self, mode, random = False):
@@ -44,7 +43,7 @@ class DQN:
         # N-step Learning
         self.n_step = 3
         
-        # Noisy Netowkr
+        # Noisy Network
         self.std = 0.2
         
         # PER

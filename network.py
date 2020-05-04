@@ -34,8 +34,11 @@ class BayesLinear(tf.keras.layers.Layer):
     
     def call(self, inputs, sample=False):
         if sample:
+            eps = tf.keras.backend.random_normal(self.w_mu.shape)
             w_std = tf.math.log1p(tf.math.exp(self.w_rho))
             w = self.w_mu + w_eps * w_std
+        else:
+            w = self.w_mu
             
         b = self.b
         return tf.matmul(inputs, w) + b
@@ -107,7 +110,7 @@ class DuelModel(tf.keras.models.Model):
         self.atom = atom
         
 
-    def call(self, x):
+    def call(self, x, sample=False):
         feature = tf.nn.relu(self.fc1(x))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
@@ -118,6 +121,44 @@ class DuelModel(tf.keras.models.Model):
         advantage = tf.reshape(self.afc2(advantage), [-1, self.action, self.atom])
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
+        dist = tf.nn.softmax(output, axis=-1)
+        dist = tf.clip_by_value(dist,1e-3, 1e8)
+        
+        return dist
+    
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.vfc2.reset_noise()
+        self.afc2.reset_noise()
+        
+        
+class OldDuelModel(tf.keras.models.Model):
+    def __init__(self, state, action, std=0.2):
+        super(OldDuelModel, self).__init__()
+        self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
+        self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
+        
+        self.vfc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.vfc2 = NoisyLinear(32, 1, std_init = std)
+        
+        self.afc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.afc2 = NoisyLinear(32, action, std_init = std)
+        
+        self.state = state
+        self.action = action
+        
+
+    def call(self, x, sample=False):
+        feature = tf.nn.relu(self.fc1(x))
+        feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
+        
+        value = tf.nn.relu(self.vfc1(feature))
+        value = tf.reshape(self.vfc2(value), [-1,1])
+        
+        advantage = tf.nn.relu(self.afc1(feature))
+        advantage = tf.reshape(self.afc2(advantage), [-1, self.action])
+        
+        output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1])
         dist = tf.nn.softmax(output, axis=-1)
         dist = tf.clip_by_value(dist,1e-3, 1e8)
         
