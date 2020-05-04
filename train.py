@@ -234,7 +234,7 @@ for ep_i in range(episodes):
         next_state_n = np.array(next_state_n, dtype=np.float64)
         
         if all(done_n):
-            ball_x, ball_y = next_state[0][2:4]
+            ball_x, ball_y = next_state_n[0][2:4]
             if ball_y > 0.5:
                 reward_n[0] += 1
             else:
