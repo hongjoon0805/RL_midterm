@@ -134,7 +134,6 @@ class DQN:
         u = tf.cast(tf.math.ceil(b), dtype=tf.int64)
 
         offset = tf.linspace(0.0, float((self.batch_size - 1) * (self.atom_size )), self.batch_size)
-        print(offset)
         offset = tf.cast(offset,dtype=tf.int64)
         offset = tf.expand_dims(offset, 1)
         offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
