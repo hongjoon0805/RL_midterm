@@ -4,6 +4,42 @@ import math
 
 tf.keras.backend.set_floatx('float64')
 
+class BayesLinear(tf.keras.layers.Layer):
+
+    def __init__(self, in_features, out_features, std_init = 1/128):
+        super(NoisyLinear, self).__init__()
+        
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        total_var = 2 / in_features
+        noise_var = total_var * std_init
+        mu_var = total_var - noise_var
+        
+        noise_std, mu_std = math.sqrt(noise_var), math.sqrt(mu_var)
+        bound = math.sqrt(3.0) * mu_std
+        rho_init = np.log(np.exp(noise_std)-1)
+        
+        self.w_mu = self.add_weight(shape=(in_features, out_features),
+                                    initializer=tf.random_uniform_initializer(-bound,bound),
+                                    trainable=True, dtype=tf.float64)
+        self.w_rho = self.add_weight(shape=(out_features,),
+                                       initializer=tf.keras.initializers.Constant(rho_init),
+                                       trainable=True, dtype=tf.float64)
+        
+        self.b = self.add_weight(shape=(out_features,),
+                                    initializer='zeros',
+                                    trainable=True, dtype=tf.float64)
+        
+    
+    def call(self, inputs, sample=False):
+        if sample:
+            w_std = tf.math.log1p(tf.math.exp(self.w_rho))
+            w = self.w_mu + w_eps * w_std
+            
+        b = self.b
+        return tf.matmul(inputs, w) + b
+        
 class NoisyLinear(tf.keras.layers.Layer):
 
     def __init__(self, in_features=32, out_features=32, std_init = 0.2):
@@ -41,7 +77,7 @@ class NoisyLinear(tf.keras.layers.Layer):
         self.b_eps = tf.reshape(epsilon_out, [self.out_features])
     
     def call(self, inputs):
-        w = self.w_mu +self. w_eps * self.w_sigma
+        w = self.w_mu + self.w_eps * self.w_sigma
         b = self.b_mu + self.b_eps * self.b_sigma
         
         return tf.matmul(inputs, w) + b
