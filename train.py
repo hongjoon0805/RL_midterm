@@ -58,7 +58,7 @@ class DQN:
         self.transition = list()
         
         self.frame_cnt = 0
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
 
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
@@ -138,9 +138,6 @@ class DQN:
         offset = tf.cast(offset,dtype=tf.int64)
         offset = tf.expand_dims(offset, 1)
         offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
-        
-        print(tf.shape(offset))
-        print(aaaa)
 
         proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist), dtype=tf.float64), [-1])
         
