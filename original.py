@@ -82,6 +82,9 @@ class DQN:
         grad = tape.gradient(loss, model_vars)
         self.optimizer.apply_gradients(zip(grad, model_vars))
         
+        self.model.reset_noise()
+        self.target_model.reset_noise()
+        
     def update_epsilon(self):
         # Exploration 시 사용할 epsilon 값을 업데이트
         
