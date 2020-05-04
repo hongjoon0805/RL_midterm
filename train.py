@@ -232,12 +232,14 @@ for ep_i in range(episodes):
         action = [dqn[0].select_action(state[0].reshape(1,10)), dqn[1].select_action(state[1].reshape(1,10))]
         next_state_n, reward_n, done_n, info = env.step(action)
         next_state_n = np.array(next_state_n, dtype=np.float64)
+        
         if all(done_n):
-            ball_x, ball_y = next_state_n[0][2:4]
-            if ball_y < 0.5:
+            ball_x, ball_y = next_state[0][2:4]
+            if ball_y > 0.5:
                 reward_n[0] += 1
             else:
                 reward_n[1] += 1
+                
         rewards_cnt += np.array(reward_n)
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
         next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt)

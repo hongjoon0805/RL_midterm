@@ -100,49 +100,6 @@ class DQN:
         self.buffer_dict['next_state'].append(next_state)
         self.buffer_dict['done'].append(int(done))
     
-    def update_model(self):
-        """Update the model by gradient descent."""
-        # PER needs beta to calculate weights
-        samples = self.memory.sample_batch(self.beta)
-        weights = samples["weights"].reshape(-1, 1)
-        indices = samples["indices"]
-        
-        # N-step Learning loss
-        # we are gonna combine 1-step loss and n-step loss so as to
-        # prevent high-variance. The original rainbow employs n-step loss only.
-        
-        gamma = self.gamma ** self.n_step
-        samples = self.memory_n.sample_batch_from_idxs(indices)
-        
-        state = samples["obs"]
-        next_state = samples["next_obs"]
-        action = samples["acts"]
-        reward = samples["rews"].reshape(-1, 1)
-        done = samples["done"].reshape(-1, 1)
-        
-        # Categorical DQN algorithm
-        delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
-        
-        with tf.GradientTape() as tape:
-            
-            elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
-            elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
-            elementwise_loss += elementwise_loss_n_loss
-
-            # PER: importance sampling before average
-            loss = torch.mean(elementwise_loss * weights)
-        
-        model_weights = self.dqn.trainable_variables
-        grad = tape.gradient(loss, model_weights)
-        self.optimizer.apply_gradients(zip(grad, model_weights))
-        
-        
-        # PER: update priorities
-        loss_for_prior = elementwise_loss.numpy()
-        new_priorities = loss_for_prior + self.prior_eps
-        self.memory.update_priorities(indices, new_priorities)
-
-        return loss.item()
     
     def make_minibatch(self,buffer_dict):
         bsize = self.batch_size
@@ -214,7 +171,7 @@ for ep_i in range(10000):
         
         if all(done_n):
             ball_x, ball_y = next_state[0][2:4]
-            if ball_y < 0.5:
+            if ball_y > 0.5:
                 reward_n[0] += 1
             else:
                 reward_n[1] += 1
@@ -299,3 +256,48 @@ for ep_i in range(10000):
 #     elementwise_loss = -tf.math.reduce_sum(proj_dist * log_p, axis = 1)
 
 #     return elementwise_loss
+
+
+# def update_model(self):
+#     """Update the model by gradient descent."""
+#     # PER needs beta to calculate weights
+#     samples = self.memory.sample_batch(self.beta)
+#     weights = samples["weights"].reshape(-1, 1)
+#     indices = samples["indices"]
+
+#     # N-step Learning loss
+#     # we are gonna combine 1-step loss and n-step loss so as to
+#     # prevent high-variance. The original rainbow employs n-step loss only.
+
+#     gamma = self.gamma ** self.n_step
+#     samples = self.memory_n.sample_batch_from_idxs(indices)
+
+#     state = samples["obs"]
+#     next_state = samples["next_obs"]
+#     action = samples["acts"]
+#     reward = samples["rews"].reshape(-1, 1)
+#     done = samples["done"].reshape(-1, 1)
+
+#     # Categorical DQN algorithm
+#     delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
+
+#     with tf.GradientTape() as tape:
+
+#         elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
+#         elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
+#         elementwise_loss += elementwise_loss_n_loss
+
+#         # PER: importance sampling before average
+#         loss = torch.mean(elementwise_loss * weights)
+
+#     model_weights = self.dqn.trainable_variables
+#     grad = tape.gradient(loss, model_weights)
+#     self.optimizer.apply_gradients(zip(grad, model_weights))
+
+
+#     # PER: update priorities
+#     loss_for_prior = elementwise_loss.numpy()
+#     new_priorities = loss_for_prior + self.prior_eps
+#     self.memory.update_priorities(indices, new_priorities)
+
+#     return loss.item()
