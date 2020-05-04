@@ -41,11 +41,8 @@ class NoisyLinear(tf.keras.layers.Layer):
         self.b_eps = tf.reshape(epsilon_out, [self.out_features])
     
     def call(self, inputs):
-        w_eps = tf.keras.backend.random_normal(self.w_mu.shape)
-        w = self.w_mu + w_eps * self.w_sigma
-        
-        b_eps = tf.keras.backend.random_normal(self.b_mu.shape)
-        b = self.b_mu + b_eps * self.b_sigma
+        w = self.w_mu +self. w_eps * self.w_sigma
+        b = self.b_mu + self.b_eps * self.b_sigma
         
         return tf.matmul(inputs, w) + b
         

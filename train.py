@@ -83,6 +83,8 @@ class DQN:
         with tf.GradientTape() as tape:
             # 1-step loss
             elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
+            
+            # n-step loss
             gamma = self.gamma ** self.n_step
             samples = self.memory_n.sample_batch_from_idxs(indices)
             elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
