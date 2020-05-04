@@ -133,10 +133,14 @@ class DQN:
         l = tf.cast(tf.math.floor(b), dtype=tf.int64)
         u = tf.cast(tf.math.ceil(b), dtype=tf.int64)
 
-        offset = tf.linspace(0.0, float((self.batch_size ) * (self.atom_size )), self.batch_size)
+        offset = tf.linspace(0.0, float((self.batch_size - 1) * (self.atom_size )), self.batch_size)
+        print(offset)
         offset = tf.cast(offset,dtype=tf.int64)
         offset = tf.expand_dims(offset, 1)
         offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
+        
+        print(tf.shape(offset))
+        print(aaaa)
 
         proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist), dtype=tf.float64), [-1])
         
@@ -165,9 +169,9 @@ class DQN:
         ball_x, ball_y = state[2:4]
         ball_radius = 0.025
         bar_radius = 0.05
-        ball_coord = [ball_x-0.05, ball_x-0.025, ball_x, ball_x+0.025, ball_x+0.05]
+        bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
         if abs(bar_y - ball_y) == ball_radius:
-            if bar_x in ball_coord:
+            if ball_x in bar_coord:
                 reward = 10
 
         elif bar_y==ball_y:
@@ -191,8 +195,6 @@ class DQN:
         # PER: increase beta
         fraction = min(frame_cnt / num_frames, 1.0)
         self.beta = self.beta + fraction * (1.0 - self.beta)
-        
-        print(self.beta)
     
         return next_state, reward, done
     
