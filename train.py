@@ -62,7 +62,7 @@ class DQN:
         
         self.frame_cnt = 0
 #         self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
+        self.optimizer = tf.keras.optimizers.Adam()
 
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
