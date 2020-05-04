@@ -25,7 +25,7 @@ class DQN:
         self.action_size = 3
         self.random = random
         
-        self.memory_size  = int(2e4)
+        self.memory_size  = int(1e5)
         self.batch_size = 128
         self.gamma = 0.99
         
@@ -108,6 +108,9 @@ class DQN:
         loss_for_prior = elementwise_loss.numpy()
         new_priorities = loss_for_prior + self.prior_eps
         self.memory.update_priorities(indices, new_priorities)
+        
+        self.model.reset_noise()
+        self.target_model.reset_noise()
     
     def _compute_dqn_loss(self, samples: Dict[str, np.ndarray], gamma: float):
         """Return categorical dqn loss."""
@@ -172,14 +175,14 @@ class DQN:
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
         if abs(bar_y - ball_y) == ball_radius:
             if ball_x in bar_coord:
-                reward = 10
+                reward = 0.5
 
         elif bar_y==ball_y:
-            reward = -1
+            reward = -3
         
         return reward
     
-    def pre_process(self, next_state: np.ndarray, reward, done, frame_cnt, num_frames) -> Tuple[np.ndarray, np.float64, bool]:
+    def pre_process(self, next_state: np.ndarray, reward, done, frame_cnt) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
         reward = self._cal_reward(next_state, reward)
         
@@ -192,10 +195,6 @@ class DQN:
         if one_step_transition:
             self.memory.store(*one_step_transition)
         
-        # PER: increase beta
-        fraction = min(frame_cnt / num_frames, 1.0)
-        self.beta = self.beta + fraction * (1.0 - self.beta)
-    
         return next_state, reward, done
     
     def increment_beta(self):
@@ -230,16 +229,12 @@ last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
 
 state = env.reset()
 frame_cnt = 0
-num_frames = 5e6
 episodes = int(1e5)
 for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
     env.seed(ep_i)
     state = np.array(env.reset())
     rewards_cnt = np.array([0,0], dtype=np.float64)
-
-    if frame_cnt > num_frames:
-        break
 
     while not all(done_n): 
         action = [dqn[0].select_action(state[0].reshape(1,10)), dqn[1].select_action(state[1].reshape(1,10))]
@@ -253,7 +248,7 @@ for ep_i in range(episodes):
                 reward_n[1] += 1
         rewards_cnt += np.array(reward_n)
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
-        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt, num_frames)
+        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt)
         state = next_state_n
 
         # if training is ready
@@ -263,8 +258,6 @@ for ep_i in range(episodes):
 
         frame_cnt += 1
 
-    dqn[turn].model.reset_noise()
-    dqn[turn].target_model.reset_noise()
     dqn[turn].update_target_model()
 
     last_100_episode[0].append(rewards_cnt[0])
