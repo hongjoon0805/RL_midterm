@@ -61,6 +61,7 @@ class DQN:
         self.transition = list()
         
         self.frame_cnt = 0
+#         self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
 
     def update_target_model(self):
@@ -144,11 +145,11 @@ class DQN:
         proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist), dtype=tf.float64), [-1])
         
         proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(l + offset, [-1,1]),
+                                             tf.reshape(l + offset, [-1]),
                                              tf.reshape(next_dist * (tf.cast(u, tf.float64) - b), [-1]))
 
         proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(u + offset, [-1,1]),
+                                             tf.reshape(u + offset, [-1]),
                                              tf.reshape(next_dist * (b - tf.cast(l, tf.float64)), [-1]))
         
         proj_dist = tf.reshape(proj_dist, tf.shape(next_dist))
@@ -178,7 +179,7 @@ class DQN:
         
         return reward
     
-    def pre_process(self, next_state: np.ndarray, reward, done, frame_cnt) -> Tuple[np.ndarray, np.float64, bool]:
+    def pre_process(self, next_state: np.ndarray, reward, done) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
         reward = self._cal_reward(next_state, reward)
         
@@ -243,7 +244,7 @@ for ep_i in range(episodes):
                 
         rewards_cnt += np.array(reward_n)
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
-        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt)
+        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done)
         state = next_state_n
 
         # if training is ready

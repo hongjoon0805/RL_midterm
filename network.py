@@ -127,11 +127,11 @@ class DuelModel(tf.keras.models.Model):
         self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
-        self.vfc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
-        self.vfc2 = NoisyLinear(32, 1*atom, std_init = std)
+        self.vfc1 = NoisyLinear(128,32)
+        self.vfc2 = NoisyLinear(32, 1, std_init = std)
         
-        self.afc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
-        self.afc2 = NoisyLinear(32, action*atom, std_init = std)
+        self.afc1 = NoisyLinear(128,32)
+        self.afc2 = NoisyLinear(32, action, std_init = std)
         
         self.state = state
         self.action = action
