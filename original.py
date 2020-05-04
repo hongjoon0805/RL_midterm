@@ -150,10 +150,10 @@ def _cal_reward(state, reward):
     bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
     if abs(bar_y - ball_y) == ball_radius:
         if ball_x in bar_coord:
-            reward = 0.5
+            reward = 0.1
 
     elif bar_y==ball_y:
-        reward = -3
+        reward = -1
 
     return reward
 

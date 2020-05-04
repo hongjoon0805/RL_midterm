@@ -166,10 +166,10 @@ class OldDuelModel(tf.keras.models.Model):
         self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
-        self.vfc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.vfc1 = NoisyLinear(128,32)
         self.vfc2 = NoisyLinear(32, 1, std_init = std)
         
-        self.afc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.afc1 = NoisyLinear(128,32)
         self.afc2 = NoisyLinear(32, action, std_init = std)
         
         self.state = state
@@ -187,10 +187,8 @@ class OldDuelModel(tf.keras.models.Model):
         advantage = tf.reshape(self.afc2(advantage), [-1, self.action])
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1])
-        dist = tf.nn.softmax(output, axis=-1)
-        dist = tf.clip_by_value(dist,1e-3, 1e8)
         
-        return dist
+        return output
     
     def reset_noise(self):
         """Reset all noisy layers."""
