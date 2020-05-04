@@ -25,7 +25,7 @@ class DQN:
         self.action_size = 3
         self.random = random
         
-        self.memory_size  = int(1e4)
+        self.memory_size  = int(2e4)
         self.batch_size = 128
         self.gamma = 0.99
         
@@ -133,7 +133,7 @@ class DQN:
         l = tf.cast(tf.math.floor(b), dtype=tf.int64)
         u = tf.cast(tf.math.ceil(b), dtype=tf.int64)
 
-        offset = tf.linspace(0.0, float((self.batch_size - 1) * (self.atom_size )), self.batch_size)
+        offset = tf.linspace(0.0, float((self.batch_size ) * (self.atom_size )), self.batch_size)
         offset = tf.cast(offset,dtype=tf.int64)
         offset = tf.expand_dims(offset, 1)
         offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
@@ -175,7 +175,7 @@ class DQN:
         
         return reward
     
-    def pre_process(self, next_state: np.ndarray, reward, done, frame_cnt) -> Tuple[np.ndarray, np.float64, bool]:
+    def pre_process(self, next_state: np.ndarray, reward, done, frame_cnt, num_frames) -> Tuple[np.ndarray, np.float64, bool]:
         """Take an action and return the response of the env."""
         reward = self._cal_reward(next_state, reward)
         
@@ -191,6 +191,8 @@ class DQN:
         # PER: increase beta
         fraction = min(frame_cnt / num_frames, 1.0)
         self.beta = self.beta + fraction * (1.0 - self.beta)
+        
+        print(self.beta)
     
         return next_state, reward, done
     
@@ -296,7 +298,7 @@ for ep_i in range(episodes):
                 reward_n[1] += 1
         rewards_cnt += np.array(reward_n)
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
-        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt)
+        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done, frame_cnt, num_frames)
         state = next_state_n
 
         # if training is ready
