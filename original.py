@@ -144,57 +144,6 @@ class DQN:
 
         return loss.item()
     
-    def _compute_dqn_loss(self, samples: Dict[str, np.ndarray], gamma: float):
-        """Return categorical dqn loss."""
-        device = self.device  # for shortening the following lines
-        
-        state = samples["obs"]
-        next_state = samples["next_obs"]
-        action = samples["acts"]
-        reward = samples["rews"].reshape(-1, 1)
-        done = samples["done"].reshape(-1, 1)
-        
-        # Categorical DQN algorithm
-        delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
-
-        # Double DQN
-        next_action = self.dqn(next_state).argmax(1)
-        next_dist = self.dqn_target.dist(next_state)
-        next_dist = next_dist[range(self.batch_size), next_action]
-
-        t_z = reward + (1 - done) * gamma * self.support
-        t_z = tf.clip_by_value(self.v_min, self.v_max)
-        b = (t_z - self.v_min) / delta_z
-        l = tf.cast(tf.math.floor(b), dtype=tf.float64)
-        u = tf.cast(tf.math.ceil(b), dtype=tf.float64)
-
-        offset = tf.linspace(0, (self.batch_size - 1) * self.atom_size, self.batch_size)
-        offset = tf.cast(offset,dtype=tf.float64)
-        offset = tf.expand_dims(offset, 1)
-        offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
-
-        proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist)), [-1])
-        
-        proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(l + offset, [-1]),
-                                             tf.reshape(next_dist * (u - b), [-1]))
-
-        proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-                                             tf.reshape(u + offset, [-1]),
-                                             tf.reshape(next_dist * (b - l), [-1]))
-            
-
-        dist = self.dqn(state)
-        # indexing은 tf.gather_nd 사용하자 <-- 이거 조심. 디버깅 할 때 문제 있으면 이부분 부터 보자.
-        index = tf.concat([tf.range(self.batch_size), action], axis=0)
-        log_p = tf.math.log(tf.gather_nd(dist, index))
-        
-        log_p = torch.log(dist[range(self.batch_size), action])
-        
-        elementwise_loss = -tf.math.reduce_sum(proj_dist * log_p, axis = 1)
-
-        return elementwise_loss
-    
     def make_minibatch(self,buffer_dict):
         bsize = self.batch_size
         batch_idx = np.random.choice(list(range(len(buffer_dict['state'])-(self.n_step-1))), bsize, replace=False)
@@ -236,18 +185,19 @@ turn = 0
 
 last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
 
-def _cal_reward(state, reward):
+def _cal_reward(self, state, reward):
     bar_x, bar_y = state[:2]
     ball_x, ball_y = state[2:4]
     ball_radius = 0.025
     bar_radius = 0.05
+    bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
     if abs(bar_y - ball_y) == ball_radius:
-        if abs(bar_x - ball_x) <= bar_radius:
+        if ball_x in bar_coord:
             reward = 0.5
-            
+
     elif bar_y==ball_y:
         reward = -3
-        
+
     return reward
 
 for ep_i in range(10000):
@@ -261,6 +211,13 @@ for ep_i in range(10000):
         action = [dqn1.predict(state[0].reshape(1,10)), dqn2.predict(state[1].reshape(1,10))]
         next_state, reward_n, done_n, info = env.step(action)
         next_state = np.array(next_state)
+        
+        if all(done_n):
+            ball_x, ball_y = next_state_n[0][2:4]
+            if ball_y < 0.5:
+                reward_n[0] += 1
+            else:
+                reward_n[1] += 1
         
         rewards_cnt[0] += reward_n[0]
         rewards_cnt[1] += reward_n[1]
@@ -292,3 +249,53 @@ for ep_i in range(10000):
         
         
         
+# def _compute_dqn_loss(self, samples: Dict[str, np.ndarray], gamma: float):
+#     """Return categorical dqn loss."""
+#     device = self.device  # for shortening the following lines
+
+#     state = samples["obs"]
+#     next_state = samples["next_obs"]
+#     action = samples["acts"]
+#     reward = samples["rews"].reshape(-1, 1)
+#     done = samples["done"].reshape(-1, 1)
+
+#     # Categorical DQN algorithm
+#     delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
+
+#     # Double DQN
+#     next_action = self.dqn(next_state).argmax(1)
+#     next_dist = self.dqn_target.dist(next_state)
+#     next_dist = next_dist[range(self.batch_size), next_action]
+
+#     t_z = reward + (1 - done) * gamma * self.support
+#     t_z = tf.clip_by_value(self.v_min, self.v_max)
+#     b = (t_z - self.v_min) / delta_z
+#     l = tf.cast(tf.math.floor(b), dtype=tf.float64)
+#     u = tf.cast(tf.math.ceil(b), dtype=tf.float64)
+
+#     offset = tf.linspace(0, (self.batch_size - 1) * self.atom_size, self.batch_size)
+#     offset = tf.cast(offset,dtype=tf.float64)
+#     offset = tf.expand_dims(offset, 1)
+#     offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
+
+#     proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist)), [-1])
+
+#     proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
+#                                          tf.reshape(l + offset, [-1]),
+#                                          tf.reshape(next_dist * (u - b), [-1]))
+
+#     proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
+#                                          tf.reshape(u + offset, [-1]),
+#                                          tf.reshape(next_dist * (b - l), [-1]))
+
+
+#     dist = self.dqn(state)
+#     # indexing은 tf.gather_nd 사용하자 <-- 이거 조심. 디버깅 할 때 문제 있으면 이부분 부터 보자.
+#     index = tf.concat([tf.range(self.batch_size), action], axis=0)
+#     log_p = tf.math.log(tf.gather_nd(dist, index))
+
+#     log_p = torch.log(dist[range(self.batch_size), action])
+
+#     elementwise_loss = -tf.math.reduce_sum(proj_dist * log_p, axis = 1)
+
+#     return elementwise_loss
