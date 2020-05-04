@@ -43,54 +43,82 @@ class BayesLinear(tf.keras.layers.Layer):
         b = self.b
         return tf.matmul(inputs, w) + b
         
+# class NoisyLinear(tf.keras.layers.Layer):
+
+#     def __init__(self, in_features=32, out_features=32, std_init = 0.2):
+#         super(NoisyLinear, self).__init__()
+        
+#         self.in_features = in_features
+#         self.out_features = out_features
+        
+#         mu_range = 1 / math.sqrt(in_features)
+        
+#         self.w_mu = self.add_weight(shape=(in_features, out_features),
+#                                     initializer=tf.random_uniform_initializer(-mu_range,mu_range),
+#                                     trainable=True, dtype=tf.float64)
+#         self.w_sigma = self.add_weight(shape=(in_features, out_features),
+#                                        initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(in_features)),
+#                                        trainable=True, dtype=tf.float64)
+        
+#         self.b_mu = self.add_weight(shape=(out_features,),
+#                                     initializer=tf.random_uniform_initializer(-mu_range,mu_range),
+#                                     trainable=True, dtype=tf.float64)
+#         self.b_sigma = self.add_weight(shape=(out_features,),
+#                                        initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(out_features)),
+#                                        trainable=True, dtype=tf.float64)
+
+        
+#         self.reset_noise()
+        
+#     def reset_noise(self):
+#         """Make new noise."""
+#         epsilon_in = tf.reshape(self.scale_noise(self.in_features), [self.in_features, 1])
+#         epsilon_out = tf.reshape(self.scale_noise(self.out_features), [1, self.out_features])
+
+#         # outer product
+#         self.w_eps = epsilon_in * epsilon_out
+#         self.b_eps = tf.reshape(epsilon_out, [self.out_features])
+    
+#     def call(self, inputs):
+#         w = self.w_mu + self.w_eps * self.w_sigma
+#         b = self.b_mu + self.b_eps * self.b_sigma
+        
+#         return tf.matmul(inputs, w) + b
+        
+#     @staticmethod
+#     def scale_noise(size: int):
+#         """Set scale to make noise (factorized gaussian noise)."""
+#         x = tf.random.normal([size], dtype = tf.float64)
+        
+#         return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
+
+
 class NoisyLinear(tf.keras.layers.Layer):
 
-    def __init__(self, in_features=32, out_features=32, std_init = 0.2):
+    def __init__(self, input_dim=32, units=32, std_init = 0.2):
         super(NoisyLinear, self).__init__()
+        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True)
+        self.w_sigma = self.add_weight(shape=(input_dim, units),
+                                       initializer=tf.keras.initializers.Constant(value=0.017),
+                                       trainable=True)
         
-        self.in_features = in_features
-        self.out_features = out_features
-        
-        mu_range = 1 / math.sqrt(in_features)
-        
-        self.w_mu = self.add_weight(shape=(in_features, out_features),
-                                    initializer=tf.random_uniform_initializer(-mu_range,mu_range),
-                                    trainable=True, dtype=tf.float64)
-        self.w_sigma = self.add_weight(shape=(in_features, out_features),
-                                       initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(in_features)),
-                                       trainable=True, dtype=tf.float64)
-        
-        self.b_mu = self.add_weight(shape=(out_features,),
-                                    initializer=tf.random_uniform_initializer(-mu_range,mu_range),
-                                    trainable=True, dtype=tf.float64)
-        self.b_sigma = self.add_weight(shape=(out_features,),
-                                       initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(out_features)),
-                                       trainable=True, dtype=tf.float64)
+        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True)
+        self.b_sigma = self.add_weight(shape=(units,),
+                                       initializer=tf.keras.initializers.Constant(value=0.017),
+                                       trainable=True)
 
-        
-        self.reset_noise()
-        
-    def reset_noise(self):
-        """Make new noise."""
-        epsilon_in = tf.reshape(self.scale_noise(self.in_features), [self.in_features, 1])
-        epsilon_out = tf.reshape(self.scale_noise(self.out_features), [1, self.out_features])
-
-        # outer product
-        self.w_eps = epsilon_in * epsilon_out
-        self.b_eps = tf.reshape(epsilon_out, [self.out_features])
     
     def call(self, inputs):
-        w = self.w_mu + self.w_eps * self.w_sigma
-        b = self.b_mu + self.b_eps * self.b_sigma
+        w_eps = tf.keras.backend.random_normal(self.w_mu.shape)
+        w = self.w_mu + w_eps * self.w_sigma
+        
+        b_eps = tf.keras.backend.random_normal(self.b_mu.shape)
+        b = self.b_mu + b_eps * self.b_sigma
         
         return tf.matmul(inputs, w) + b
-        
-    @staticmethod
-    def scale_noise(size: int):
-        """Set scale to make noise (factorized gaussian noise)."""
-        x = tf.random.normal([size], dtype = tf.float64)
-        
-        return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
+    
+    def reset_noise(self):
+        pass
 
     
 class DuelModel(tf.keras.models.Model):

@@ -66,6 +66,10 @@ class DQN:
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
     
+    def increment_beta(self, episode_idx, total_episode):
+        # PER: increase beta
+        fraction = min(episode_idx / total_episode, 1.0)
+        self.beta = self.beta + fraction * (1.0 - self.beta)
     
     def update_model(self):
         """Update the model by gradient descent."""
@@ -189,9 +193,6 @@ class DQN:
         
         return next_state, reward, done
     
-    def increment_beta(self):
-        self.beta = min(self.beta + self.d_beta, 1.0)
-    
     def select_action(self, state: np.ndarray) -> np.ndarray:
         """Select an action from the input state."""
         # NoisyNet: no epsilon greedy action selection
@@ -248,11 +249,11 @@ for ep_i in range(episodes):
         # if training is ready
         if len(dqn[turn].memory) >= dqn[turn].batch_size:
             dqn[turn].update_model()
-            dqn[turn].increment_beta()
 
         frame_cnt += 1
 
     dqn[turn].update_target_model()
+    dqn[turn].increment_beta(ep_i, episodes)
 
     last_100_episode[0].append(rewards_cnt[0])
     last_100_episode[1].append(rewards_cnt[1])
