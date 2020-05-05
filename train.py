@@ -115,8 +115,10 @@ class DQN:
         state = samples["obs"]
         next_state = samples["next_obs"]
         action = samples["acts"]
-        reward = samples["rews"].reshape(-1, 1)
-        done = samples["done"].reshape(-1, 1)
+#         reward = samples["rews"].reshape(-1, 1)
+        reward = samples["rews"]
+#         done = samples["done"].reshape(-1, 1)
+        done = samples["done"]
 
         # Double DQN
         q_next = self.model(next_state)
@@ -135,7 +137,7 @@ class DQN:
         
         q = tf.gather_nd(q, index)
         
-        elementwise_loss = tf.math.square(target_q - q)
+        elementwise_loss = tf.math.square(target_q * gamma * (1-done) + reward - q)
 
         return elementwise_loss
     
