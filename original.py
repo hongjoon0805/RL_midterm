@@ -107,14 +107,13 @@ class DQN:
             
         states = np.array(buffer_dict['state'])[batch_idx]
         actions = np.array(buffer_dict['action'])[batch_idx]
-        rewards_arr = np.zeros((bsize,self.n_step))
-        gamma_arr = np.ones((self.n_step,))
+        rewards_arr = np.zeros((bsize))
         for i in range(self.n_step):
-            rewards_arr[:,i] = np.array(buffer_dict['reward'])[batch_idx+i] * (1-np.array(buffer_dict['done'])[batch_idx+i])
-            if i > 0:
-                gamma_arr[i] = self.gamma * gamma_arr[i-1]
+            rwd = np.array(buffer_dict['reward'])[batch_idx+i]
+            done = (1-np.array(buffer_dict['done'])[batch_idx+i])
+            reward_arr = self.gamma * reward_arr + rwd * (1 - done)
 
-        rewards = (rewards_arr * gamma_arr).sum(axis=1)
+        rewards = reward_arr
             
         next_states = np.array(buffer_dict['next_state'])[batch_idx + (self.n_step-1)]
         dones = np.array(buffer_dict['done'])[batch_idx]
@@ -125,7 +124,7 @@ class DQN:
         
         q_value = self.target_model(next_states).numpy()[np.arange(bsize), action_max]
         q_target_out = rewards + (self.gamma ** self.n_step) * q_value
-        target = q_target_out * (1-dones) + rewards * (dones)
+        target = q_target_out * (1-dones) + rewards
         action_target[np.arange(bsize), actions] = target
         
         X, Y = states, action_target

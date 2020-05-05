@@ -61,8 +61,8 @@ class DQN:
         self.transition = list()
         
         self.frame_cnt = 0
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
-#         self.optimizer = tf.keras.optimizers.Adam()
+#         self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
+        self.optimizer = tf.keras.optimizers.Adam()
 
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
@@ -115,27 +115,21 @@ class DQN:
         state = samples["obs"]
         next_state = samples["next_obs"]
         action = samples["acts"]
-#         reward = samples["rews"].reshape(-1, 1)
         reward = samples["rews"]
-#         done = samples["done"].reshape(-1, 1)
         done = samples["done"]
 
         # Double DQN
-        q_next = self.model(next_state)
-        next_action = tf.math.argmax(q_next, axis=1)
-        target_q = self.target_model(next_state)
-        
+        next_action = tf.math.argmax(self.model(next_state), axis=1)
         index = tf.stack([tf.range(self.batch_size, dtype=tf.int64), next_action], axis=0)
         index = tf.transpose(index)
-        target_q = tf.cast(tf.gather_nd(target_q, index), dtype=tf.float64)
-
-        q = self.model(state)
         
+        target_q = tf.gather_nd(self.target_model(next_state), index)
+
         action = tf.convert_to_tensor(action, dtype = tf.int64)
         index = tf.stack([tf.range(self.batch_size, dtype=tf.int64), action], axis=0)
         index = tf.transpose(index)
         
-        q = tf.gather_nd(q, index)
+        q = tf.gather_nd(self.model(state), index)
         
         elementwise_loss = tf.math.square(target_q * gamma * (1-done) + reward - q)
 
@@ -178,10 +172,7 @@ class DQN:
         if self.random:
             return np.random.choice(range(self.action_size), 1, replace=False)[0]
         
-        actions = np.argmax(self.model(state))
-        
-        selected_action = np.argmax(actions)
-        
+        selected_action = np.argmax(self.model(state))
         self.transition = [state, selected_action]
         
         return selected_action
