@@ -59,7 +59,8 @@ class DQN:
                        'done':deque(maxlen=self.memory_size)}
         
         self.frame_cnt = 0
-        self.optimizer = tf.keras.optimizers.Adam()
+#         self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
 
     def predict(self, state):
         # state를 넣어 policy에 따라 action을 반환
@@ -134,6 +135,8 @@ class DQN:
 
 env = gym.make('PongDuel-v0')
 
+f = open('log_original.txt','w')
+
 dqn1 = DQN(False)
 dqn2 = DQN(True)
 
@@ -150,10 +153,10 @@ def _cal_reward(state, reward):
     bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
     if abs(bar_y - ball_y) == ball_radius:
         if ball_x in bar_coord:
-            reward = 0.1
+            reward = 5
 
     elif bar_y==ball_y:
-        reward = -1
+        reward = -3
 
     return reward
 
@@ -196,6 +199,12 @@ for ep_i in range(10000):
     
     
     print('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f'%(ep_i, 
+                                                                  rewards_cnt[0], 
+                                                                  rewards_cnt[1],                                  
+                                                                  np.mean(last_100_episode[0]), 
+                                                                  np.mean(last_100_episode[1]),))
+    
+    f.write('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f\n'%(ep_i, 
                                                                   rewards_cnt[0], 
                                                                   rewards_cnt[1],                                  
                                                                   np.mean(last_100_episode[0]), 
