@@ -85,20 +85,14 @@ class DQN:
         weights = samples["weights"].reshape(-1, 1)
         indices = samples["indices"]
         
-        
         # N-step Learning loss
-        # we are gonna combine 1-step loss and n-step loss so as to
-        # prevent high-variance. The original rainbow employs n-step loss only.
         
         with tf.GradientTape() as tape:
-            # 1-step loss
-            elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
             
             # n-step loss
             gamma = self.gamma ** self.n_step
             samples = self.memory_n.sample_batch_from_idxs(indices)
-            elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
-            elementwise_loss += elementwise_loss_n_loss
+            elementwise_loss = self._compute_dqn_loss(samples, gamma)
             
             # PER: importance sampling before average
             loss = tf.math.reduce_mean(elementwise_loss * weights)
@@ -151,11 +145,11 @@ class DQN:
         ball_radius = 0.025
         bar_radius = 0.05
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
-        if abs(bar_y - ball_y) == ball_radius:
-            if ball_x in bar_coord:
-                reward = 0.1
+#         if abs(bar_y - ball_y) == ball_radius:
+#             if ball_x in bar_coord:
+#                 reward = 0.1
 
-        elif bar_y==ball_y:
+        if bar_y==ball_y:
             reward = -1
         
         return reward
@@ -203,7 +197,7 @@ last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
 
 state = env.reset()
 frame_cnt = 0
-episodes = int(1e5)
+episodes = int(3000)
 for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
     env.seed(ep_i)

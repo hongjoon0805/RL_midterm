@@ -59,8 +59,7 @@ class DQN:
                        'done':deque(maxlen=self.memory_size)}
         
         self.frame_cnt = 0
-#         self.optimizer = tf.keras.optimizers.Adam()
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
+        self.optimizer = tf.keras.optimizers.Adam()
 
     def predict(self, state):
         # state를 넣어 policy에 따라 action을 반환
