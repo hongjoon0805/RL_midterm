@@ -82,7 +82,7 @@ class DQN:
         """Update the model by gradient descent."""
         # PER needs beta to calculate weights
         samples = self.memory.sample_batch(self.beta)
-        weights = samples["weights"].reshape(-1, 1)
+        weights = samples["weights"]
         indices = samples["indices"]
         
         # N-step Learning loss
@@ -95,6 +95,7 @@ class DQN:
             elementwise_loss = self._compute_dqn_loss(samples, gamma)
             
             # PER: importance sampling before average
+            
             loss = tf.math.reduce_mean(elementwise_loss * weights)
         
         model_weights = self.model.trainable_variables
