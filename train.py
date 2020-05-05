@@ -65,12 +65,6 @@ class DQN:
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
         
-#         variables1 = self.target_model.trainable_variables
-#         variables2 = self.model.trainable_variables
-        
-#         for v1, v2 in zip(variables1, variables2):
-#             v1.assign(v2.numpy())
-    
     def increment_beta(self, episode_idx, total_episode):
         # PER: increase beta
         fraction = min(episode_idx / total_episode, 1.0)
@@ -145,7 +139,7 @@ class DQN:
 #                 reward = 0.1
 
         if bar_y==ball_y:
-            reward = -1
+            reward = -3
         
         return reward
     
@@ -175,7 +169,6 @@ class DQN:
         self.transition = [state, selected_action]
         
         return selected_action
-    
 
 env = gym.make('PongDuel-v0')
 dqn = [DQN('l', False), DQN('r', True)]
@@ -185,7 +178,6 @@ f = open('log.txt', 'w')
 turn = 0
 
 last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
-
 
 state = env.reset()
 frame_cnt = 0
@@ -221,6 +213,7 @@ for ep_i in range(episodes):
 
     dqn[turn].update_target_model()
     dqn[turn].increment_beta(ep_i, episodes)
+    dqn[turn].model.save_weights("PER.model")
 
     last_100_episode[0].append(rewards_cnt[0])
     last_100_episode[1].append(rewards_cnt[1])

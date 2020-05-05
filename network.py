@@ -92,20 +92,19 @@ class BayesLinear(tf.keras.layers.Layer):
         
 #         return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
 
-
 class NoisyLinear(tf.keras.layers.Layer):
 
-    def __init__(self, input_dim=32, units=32, std_init = 0.2):
+    def __init__(self, input_dim=32, units=32, std_init = 0.2, name='noisy'):
         super(NoisyLinear, self).__init__()
-        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True)
+        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True, name=name+'w_mu')
         self.w_sigma = self.add_weight(shape=(input_dim, units),
                                        initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True)
+                                       trainable=True, name=name+'w_sigma')
         
-        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True)
+        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True, name=name+'b_mu')
         self.b_sigma = self.add_weight(shape=(units,),
                                        initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True)
+                                       trainable=True, name=name+'b_sigma')
 
     
     def call(self, inputs):
@@ -166,11 +165,11 @@ class OldDuelModel(tf.keras.models.Model):
         self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
-        self.vfc1 = NoisyLinear(128,32)
-        self.vfc2 = NoisyLinear(32, 1, std_init = std)
+        self.vfc1 = NoisyLinear(128,32, name = 'vfc1')
+        self.vfc2 = NoisyLinear(32, 1, std_init = std, name = 'vfc2')
         
-        self.afc1 = NoisyLinear(128,32)
-        self.afc2 = NoisyLinear(32, action, std_init = std)
+        self.afc1 = NoisyLinear(128,32, name = 'afc1')
+        self.afc2 = NoisyLinear(32, action, std_init = std, name = 'afc2')
         
         self.state = state
         self.action = action
