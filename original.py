@@ -153,10 +153,10 @@ def _cal_reward(state, reward):
     bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
     if abs(bar_y - ball_y) == ball_radius:
         if ball_x in bar_coord:
-            reward = 5
+            reward = 0.1
 
     elif bar_y==ball_y:
-        reward = -3
+        reward = -1
 
     return reward
 
@@ -212,101 +212,3 @@ for ep_i in range(10000):
     
     if (ep_i+1) % 10000 == 0:
         turn ^= 1
-        
-        
-        
-# def _compute_dqn_loss(self, samples: Dict[str, np.ndarray], gamma: float):
-#     """Return categorical dqn loss."""
-#     device = self.device  # for shortening the following lines
-
-#     state = samples["obs"]
-#     next_state = samples["next_obs"]
-#     action = samples["acts"]
-#     reward = samples["rews"].reshape(-1, 1)
-#     done = samples["done"].reshape(-1, 1)
-
-#     # Categorical DQN algorithm
-#     delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
-
-#     # Double DQN
-#     next_action = self.dqn(next_state).argmax(1)
-#     next_dist = self.dqn_target.dist(next_state)
-#     next_dist = next_dist[range(self.batch_size), next_action]
-
-#     t_z = reward + (1 - done) * gamma * self.support
-#     t_z = tf.clip_by_value(self.v_min, self.v_max)
-#     b = (t_z - self.v_min) / delta_z
-#     l = tf.cast(tf.math.floor(b), dtype=tf.float64)
-#     u = tf.cast(tf.math.ceil(b), dtype=tf.float64)
-
-#     offset = tf.linspace(0, (self.batch_size - 1) * self.atom_size, self.batch_size)
-#     offset = tf.cast(offset,dtype=tf.float64)
-#     offset = tf.expand_dims(offset, 1)
-#     offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
-
-#     proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist)), [-1])
-
-#     proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-#                                          tf.reshape(l + offset, [-1]),
-#                                          tf.reshape(next_dist * (u - b), [-1]))
-
-#     proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
-#                                          tf.reshape(u + offset, [-1]),
-#                                          tf.reshape(next_dist * (b - l), [-1]))
-
-
-#     dist = self.dqn(state)
-#     # indexing은 tf.gather_nd 사용하자 <-- 이거 조심. 디버깅 할 때 문제 있으면 이부분 부터 보자.
-#     index = tf.concat([tf.range(self.batch_size), action], axis=0)
-#     log_p = tf.math.log(tf.gather_nd(dist, index))
-
-#     log_p = torch.log(dist[range(self.batch_size), action])
-
-#     elementwise_loss = -tf.math.reduce_sum(proj_dist * log_p, axis = 1)
-
-#     return elementwise_loss
-
-
-# def update_model(self):
-#     """Update the model by gradient descent."""
-#     # PER needs beta to calculate weights
-#     samples = self.memory.sample_batch(self.beta)
-#     weights = samples["weights"].reshape(-1, 1)
-#     indices = samples["indices"]
-
-#     # N-step Learning loss
-#     # we are gonna combine 1-step loss and n-step loss so as to
-#     # prevent high-variance. The original rainbow employs n-step loss only.
-
-#     gamma = self.gamma ** self.n_step
-#     samples = self.memory_n.sample_batch_from_idxs(indices)
-
-#     state = samples["obs"]
-#     next_state = samples["next_obs"]
-#     action = samples["acts"]
-#     reward = samples["rews"].reshape(-1, 1)
-#     done = samples["done"].reshape(-1, 1)
-
-#     # Categorical DQN algorithm
-#     delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
-
-#     with tf.GradientTape() as tape:
-
-#         elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
-#         elementwise_loss_n_loss = self._compute_dqn_loss(samples, gamma)
-#         elementwise_loss += elementwise_loss_n_loss
-
-#         # PER: importance sampling before average
-#         loss = torch.mean(elementwise_loss * weights)
-
-#     model_weights = self.dqn.trainable_variables
-#     grad = tape.gradient(loss, model_weights)
-#     self.optimizer.apply_gradients(zip(grad, model_weights))
-
-
-#     # PER: update priorities
-#     loss_for_prior = elementwise_loss.numpy()
-#     new_priorities = loss_for_prior + self.prior_eps
-#     self.memory.update_priorities(indices, new_priorities)
-
-#     return loss.item()
