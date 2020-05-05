@@ -24,7 +24,7 @@ class DQN:
         self.action_size = 3
         self.random = random
         
-        self.memory_size  = int(1e4)
+        self.memory_size  = int(1e5)
         self.batch_size = 128
         self.gamma = 0.99
         

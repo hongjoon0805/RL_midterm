@@ -61,8 +61,8 @@ class DQN:
         self.transition = list()
         
         self.frame_cnt = 0
-#         self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate = 0.000125)
+#         self.optimizer = tf.keras.optimizers.Adam()
 
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
@@ -172,10 +172,10 @@ class DQN:
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
         if abs(bar_y - ball_y) == ball_radius:
             if ball_x in bar_coord:
-                reward = 0.5
+                reward = 0.1
 
         elif bar_y==ball_y:
-            reward = -3
+            reward = -1
         
         return reward
     
@@ -248,7 +248,7 @@ for ep_i in range(episodes):
         state = next_state_n
 
         # if training is ready
-        if len(dqn[turn].memory) >= dqn[turn].batch_size:
+        if len(dqn[turn].memory) >= 2000:
             dqn[turn].update_model()
 
         frame_cnt += 1
