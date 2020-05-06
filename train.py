@@ -224,7 +224,7 @@ log_name = '{}_std_{}_lr_{}'.format(
 if args.add_1_step_loss:
     log_name += 'add_1_step_loss'
 
-f = open(log_name + '.txt', 'w')
+f = open('./log/'+log_name + '.txt', 'w')
 
 turn = 0
 
@@ -282,7 +282,7 @@ for ep_i in range(episodes):
         best_changed = True
     
     if best_changed:
-        dqn.model.save_weights(log_name + '.model')
+        dqn.model.save_weights('./models/' + log_name + '.model')
         best_changed = False
         print('Model Saved')
         
