@@ -63,11 +63,11 @@ class DuelModel(tf.keras.models.Model):
         self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
-        self.vfc1 = NoisyLinear(128,32)
-        self.vfc2 = NoisyLinear(32, 1*atom, std_init = std)
+        self.vfc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.vfc2 = NoisyLinear(32, 1*atom, std_init = std, name = 'vfc2')
         
-        self.afc1 = NoisyLinear(128,32)
-        self.afc2 = NoisyLinear(32, action*atom, std_init = std)
+        self.afc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
+        self.afc2 = NoisyLinear(32, action*atom, std_init = std, name = 'afc2')
         
         self.state = state
         self.action = action
@@ -78,10 +78,10 @@ class DuelModel(tf.keras.models.Model):
         feature = tf.nn.relu(self.fc1(x))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
-        value = tf.nn.relu(self.vfc1(feature, sample))
+        value = tf.nn.relu(self.vfc1(feature))
         value = tf.reshape(self.vfc2(value, sample), [-1,1,self.atom])
         
-        advantage = tf.nn.relu(self.afc1(feature, sample))
+        advantage = tf.nn.relu(self.afc1(feature))
         advantage = tf.reshape(self.afc2(advantage, sample), [-1, self.action, self.atom])
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
