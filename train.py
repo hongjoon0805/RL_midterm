@@ -210,7 +210,7 @@ class DQN:
 env = gym.make('PongDuel-v0')
 dqn = [DQN('l', False), DQN('r', True)]
 
-f = open('log.txt', 'w')
+f = open('log_rainbow.txt', 'w')
 
 turn = 0
 
@@ -255,7 +255,7 @@ for ep_i in range(episodes):
 
     dqn[turn].update_target_model()
     dqn[turn].increment_beta(ep_i, episodes)
-    dqn[turn].model.save_weights("PER.model")
+    dqn[turn].model.save_weights("Rainbow.model")
 
     last_100_episode[0].append(rewards_cnt[0])
     last_100_episode[1].append(rewards_cnt[1])
