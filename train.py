@@ -129,17 +129,17 @@ class DQN:
         return elementwise_loss
     
     def _cal_reward(self, state, reward):
-#         bar_x, bar_y = state[:2]
-#         ball_x, ball_y = state[2:4]
-#         ball_radius = 0.025
-#         bar_radius = 0.05
-#         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
-# #         if abs(bar_y - ball_y) == ball_radius:
-# #             if ball_x in bar_coord:
-# #                 reward = 5
+        bar_x, bar_y = state[:2]
+        ball_x, ball_y = state[2:4]
+        ball_radius = 0.025
+        bar_radius = 0.05
+        bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
+#         if abs(bar_y - ball_y) == ball_radius:
+#             if ball_x in bar_coord:
+#                 reward = 5
 
-#         if bar_y==ball_y:
-#             reward = -3
+        if bar_y==ball_y:
+            reward = -1
         
         return reward
     
@@ -202,7 +202,7 @@ for ep_i in range(episodes):
                 
         rewards_cnt += np.array(reward_n)
         
-        reward_n[0] = reward_n[0] - reward_n[0]
+#         reward_n[0] = reward_n[0] - 3*reward_n[0]
         
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
         next_state, reward, done = dqn[turn].pre_process(next_state, reward, done)
