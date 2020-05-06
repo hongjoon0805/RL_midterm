@@ -185,15 +185,15 @@ class OldDuelModel(tf.keras.models.Model):
         self.action = action
         
 
-    def call(self, x, sample=False):
+    def call(self, x, sample=True):
         feature = tf.nn.relu(self.fc1(x))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
-        value = tf.nn.relu(self.vfc1(feature))
-        value = tf.reshape(self.vfc2(value), [-1,1])
+        value = tf.nn.relu(self.vfc1(feature, sample))
+        value = tf.reshape(self.vfc2(value, sample), [-1,1])
         
-        advantage = tf.nn.relu(self.afc1(feature))
-        advantage = tf.reshape(self.afc2(advantage), [-1, self.action])
+        advantage = tf.nn.relu(self.afc1(feature, sample))
+        advantage = tf.reshape(self.afc2(advantage, sample), [-1, self.action])
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1])
         
