@@ -230,10 +230,6 @@ for ep_i in range(episodes):
         next_state_n, reward_n, done_n, info = env.step(action)
         next_state_n = np.array(next_state_n, dtype=np.float64)
         
-        print(next_state_n[0])
-        print(next_state_n[1])
-        print(aaa)
-        
         if all(done_n):
             ball_x, ball_y = next_state_n[0][2:4]
             if ball_y > 0.5:
