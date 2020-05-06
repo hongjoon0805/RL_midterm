@@ -44,7 +44,13 @@ if __name__ == '__main__':
         ep_reward = 0
         env.seed(ep_i)
         obs_n = env.reset()
-
+        
+        l_reward_sum = 0
+        r_reward_sum = 0
+        
+        Round = 0
+        Step = 0
+        
         while not all(done_n): 
 
             left_q1.put( obs_n )
@@ -53,18 +59,30 @@ if __name__ == '__main__':
             r_action = right_q2.get()
             obs_n, reward_n, done_n, info = env.step([l_action, r_action])
             
-            print(obs_n)
-            print(aaaaa)
-
-            #action_n = env.action_space.sample()
-            #obs_n, reward_n, done_n, info = env.step(action_n)
+            if all(done_n):
+                ball_x, ball_y = obs_n[0][2:4]
+                if ball_y > 0.5:
+                    reward_n[0] += 1
+                else:
+                    reward_n[1] += 1
 
             l_reward = reward_n[0]
             r_reward = reward_n[1]
+            
+            l_reward_sum += l_reward
+            r_reward_sum += r_reward
+            
             l_cnt += l_reward
             r_cnt += r_reward
+            
+            Round += (reward_n[0] + reward_n[1])
+            
+            Step += 1
+            
+            print("\rRound {} || Step: {} || Left: {} || Right: {}".format(Round, Step, l_reward_sum, r_reward_sum), end="")
 
-        #print('Episode #{} left: {} right: {} '.format(ep_i, l_cnt, r_cnt))
+        print()
+        print('Episode #{} left: {} right: {} '.format(ep_i, l_cnt, r_cnt))
 
     left_q1.put( None )
     right_q1.put( None )

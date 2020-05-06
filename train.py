@@ -12,38 +12,37 @@ import operator
 from memory import PrioritizedReplayBuffer, ReplayBuffer
 from typing import Deque, Dict, List, Tuple, Callable
 from network import DuelModel, OldDuelModel
+import arguments
 tf.keras.backend.set_floatx('float64')
     
-# rainbow 구현 모두 끝나면 reward 체계를 바꿔보자. bar에 닿는 횟수가 매우 적으니, bar에 닿을 때 마다 reward를 100정도 얻을 수 있게 해보자.
 class DQN:
-    def __init__(self, mode, random = False):
+    def __init__(self, args, mode, random = False):
         
         self.mode_idx = 0 if mode == 'l' else 1
-            
+        self.args = args
         self.state_size = 10
         self.action_size = 3
-        self.random = random
         
-        self.memory_size  = int(1e5)
-        self.batch_size = 128
-        self.gamma = 0.99
+        self.memory_size  = args.memory_size
+        self.batch_size = args.batch_size
+        self.gamma = args.gamma
         
         # PER parameters
-        self.alpha = 0.2
-        self.beta = 0.6
-        self.prior_eps = 1e-6
+        self.alpha = args.alpha
+        self.beta = args.beta
+        self.prior_eps = args.prior_eps
         
         # Categorical DQN parameters
-        self.v_min = -10.0
-        self.v_max = 10.0
-        self.atom_size = 21
+        self.v_min = args.v_min
+        self.v_max = args.v_max
+        self.atom_size = args.atom_size
         self.support = tf.cast(tf.linspace(self.v_min, self.v_max, self.atom_size), dtype=tf.float64)
         
         # N-step Learning
-        self.n_step = 3
+        self.n_step = args.n_step
         
         # Noisy Network
-        self.std = 0.1
+        self.std = args.std
         
         # PER
         # memory for 1-step Learning
@@ -60,7 +59,7 @@ class DQN:
         self.transition = list()
         
         self.frame_cnt = 0
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate = args.lr)
 
     def update_target_model(self):
         self.target_model.set_weights(self.model.get_weights())
@@ -81,8 +80,9 @@ class DQN:
         
         with tf.GradientTape() as tape:
             
-            # 1-step loss
-            elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
+            if self.args.add_1_step_loss:
+                # 1-step loss
+                elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
             
             # n-step loss
             gamma = self.gamma ** self.n_step
@@ -170,7 +170,11 @@ class DQN:
         ball_radius = 0.025
         bar_radius = 0.05
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
-
+        
+        if abs(bar_y - ball_y) == ball_radius:
+            if abs(bar_x - ball_x) <= bar_radius:
+                reward = 0.1
+        
         if bar_y==ball_y:
             reward = -3
         
@@ -195,9 +199,6 @@ class DQN:
         """Select an action from the input state."""
         # NoisyNet: no epsilon greedy action selection
         
-        if self.random:
-            return np.random.choice(range(self.action_size), 1, replace=False)[0]
-        
         dist = self.model(state)
         
         actions = tf.math.reduce_sum(dist * self.support, axis=2)
@@ -208,16 +209,33 @@ class DQN:
         return selected_action
 
 env = gym.make('PongDuel-v0')
-dqn = [DQN('l', False), DQN('r', True)]
+args = arguments.get_args()
+dqn = DQN(args, 'l', False)
 
-f = open('log_rainbow.txt', 'w')
+import datetime
+date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+log_name = '{}_std_{}_lr_{}'.format(
+    date,
+    args.std,
+    args.lr
+)
+
+if args.add_1_step_loss:
+    log_name += 'add_1_step_loss'
+
+f = open(log_name + '.txt', 'w')
 
 turn = 0
 
-last_100_episode = [deque(maxlen=100), deque(maxlen=100)]
+last_100_episode = deque(maxlen=100)
+last_100_episode_eval = deque(maxlen=100)
 
 state = env.reset()
 frame_cnt = 0
+train = False
+best_changed = False
+best_avg = 0
 episodes = int(3000)
 for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
@@ -226,7 +244,8 @@ for ep_i in range(episodes):
     rewards_cnt = np.array([0,0], dtype=np.float64)
     
     while not all(done_n): 
-        action = [dqn[0].select_action(state[0].reshape(1,10)), dqn[1].select_action(state[1].reshape(1,10))]
+        rand_action = np.random.choice(range(3), 1, replace=False)[0]
+        action = [dqn.select_action(state[0].reshape(1,10)), rand_action]
         next_state_n, reward_n, done_n, info = env.step(action)
         next_state_n = np.array(next_state_n, dtype=np.float64)
         
@@ -239,33 +258,64 @@ for ep_i in range(episodes):
                 
         rewards_cnt += np.array(reward_n)
         
-        next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
-        next_state, reward, done = dqn[turn].pre_process(next_state, reward, done)
+        next_state, reward, done = next_state_n[0], reward_n[0], done_n[0]
+        next_state, reward, done = dqn.pre_process(next_state, reward, done)
         state = next_state_n
 
         # if training is ready
-        if len(dqn[turn].memory) >= dqn[turn].batch_size:
-            dqn[turn].update_model()
+        if len(dqn.memory) >= int(5e4):
+            train=True
+            dqn.update_model()
 
         frame_cnt += 1
-
-    dqn[turn].update_target_model()
-    dqn[turn].increment_beta(ep_i, episodes)
-    dqn[turn].model.save_weights("Rainbow.model")
-
-    last_100_episode[0].append(rewards_cnt[0])
-    last_100_episode[1].append(rewards_cnt[1])
-
-
-    print('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f'%(ep_i, 
-                                                                  rewards_cnt[0], 
-                                                                  rewards_cnt[1],                                  
-                                                                  np.mean(last_100_episode[0]), 
-                                                                  np.mean(last_100_episode[1]),))
     
-    f.write('Episode:%d || Left: %d || Right: %d || Left Avg: %.2f || Right Avg: %.2f\n'%(ep_i, 
-                                                                  rewards_cnt[0], 
-                                                                  rewards_cnt[1],                                  
-                                                                  np.mean(last_100_episode[0]), 
-                                                                  np.mean(last_100_episode[1]),))
+    if train:
+        dqn.update_target_model()
+        dqn.increment_beta(ep_i, episodes)
+
+    last_100_episode.append(rewards_cnt[0])
+    
+    left_avg = np.mean(last_100_episode)
+    
+    if left_avg >  best_avg:
+        best_avg = left_avg
+        best_changed = True
+    
+    if best_changed:
+        dqn.model.save_weights(log_name + '.model')
+        best_changed = False
+        print('Model Saved')
+        
+    # Evaluation
+    eval_reward_cnt = np.array([0,0], dtype=np.float64)
+    done_n = [False for _ in range(env.n_agents)]
+    state = np.array(env.reset())
+    while not all(done_n):
+        rand_action = np.random.choice(range(3), 1, replace=False)[0]
+        action = [dqn.select_action(state[0].reshape(1,10)), rand_action]
+        next_state_n, reward_n, done_n, info = env.step(action)
+        next_state_n = np.array(next_state_n, dtype=np.float64)
+
+        if all(done_n):
+            ball_x, ball_y = next_state_n[0][2:4]
+            if ball_y > 0.5:
+                reward_n[0] += 1
+            else:
+                reward_n[1] += 1
+
+        eval_reward_cnt += np.array(reward_n)
+        state = next_state_n
+    
+    last_100_episode_eval.append(eval_reward_cnt[0])
+    print('Episode:%d || Score: %d || Avg: %.2f || Eval: %.2f || Max: %.2f'%(ep_i, 
+                                                                           rewards_cnt[0],
+                                                                           left_avg,
+                                                                           np.mean(last_100_episode_eval), 
+                                                                           best_avg))
+    
+    f.write('Episode:%d || Score: %d || Avg: %.2f || Eval: %d || Max: %.2f \n'%(ep_i, 
+                                                                           rewards_cnt[0],
+                                                                           left_avg,
+                                                                           np.mean(last_100_episode_eval), 
+                                                                           best_avg))
 f.close()

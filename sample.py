@@ -1,6 +1,11 @@
 import random
 import os
 
+import numpy as np
+import tensorflow.compat.v1 as tf
+import math
+tf.keras.backend.set_floatx('float64')
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 class NoisyLinear(tf.keras.layers.Layer):
@@ -93,21 +98,38 @@ class OldDuelModel(tf.keras.models.Model):
 
 
 def wonjum_daeching(obs):
-    x, y = 29/30, 20/40
+    x, y = 29/30, 39/40
+    old_dir_arr = ['NW', 'W', 'SW', 'SE', 'E', 'NE']
+    new_dir_arr = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
     
+#     obs[0] = x - obs[0]
+    obs[1] = y - obs[1]
+#     obs[2] = x - obs[2]
+    obs[3] = y - obs[3]
     
+    old_dir = np.argmax(obs[4:])
+    obs[4+old_dir] = 0
+    new_dir = 5-old_dir
+    obs[4+new_dir] = 1
     
+    return obs
 
 def start(mode, to_recv, to_send):
     model = OldDuelModel(10, 3)
     model.load_weights('PER.model')
-    
+    idx = 0 if mode == 'left' else 1
     while True: 
         obs = to_recv.get()
         if obs == None:
             break
-        obs = np.array(obs)
-        action = np.argmax(model(obs))
+#         obs = np.array(obs[idx], dtype=np.float64)
+        obs = np.array(obs[idx])
+        if mode == 'right':
+            obs = wonjum_daeching(obs)
+        if mode == 'left':
+            action = np.argmax(model(obs.reshape(1,10)))
+#             action = np.random.choice(range(3), 1, replace=False)[0]
+        else:
+#             action = np.random.choice(range(3), 1, replace=False)[0]
+            action = np.argmax(model(obs.reshape(1,10)))
         to_send.put(action)
-        
-        
