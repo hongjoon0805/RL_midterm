@@ -45,7 +45,7 @@ class BayesLinear(tf.keras.layers.Layer):
         
 class NoisyLinear(tf.keras.layers.Layer):
 
-    def __init__(self, in_features=32, out_features=32, std_init = 0.2, , name='noisy'):
+    def __init__(self, in_features=32, out_features=32, std_init = 0.2, name='noisy'):
         super(NoisyLinear, self).__init__()
         
         self.in_features = in_features
