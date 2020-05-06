@@ -43,81 +43,87 @@ class BayesLinear(tf.keras.layers.Layer):
         b = self.b
         return tf.matmul(inputs, w) + b
         
-# class NoisyLinear(tf.keras.layers.Layer):
-
-#     def __init__(self, in_features=32, out_features=32, std_init = 0.2):
-#         super(NoisyLinear, self).__init__()
-        
-#         self.in_features = in_features
-#         self.out_features = out_features
-        
-#         mu_range = 1 / math.sqrt(in_features)
-        
-#         self.w_mu = self.add_weight(shape=(in_features, out_features),
-#                                     initializer=tf.random_uniform_initializer(-mu_range,mu_range),
-#                                     trainable=True, dtype=tf.float64)
-#         self.w_sigma = self.add_weight(shape=(in_features, out_features),
-#                                        initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(in_features)),
-#                                        trainable=True, dtype=tf.float64)
-        
-#         self.b_mu = self.add_weight(shape=(out_features,),
-#                                     initializer=tf.random_uniform_initializer(-mu_range,mu_range),
-#                                     trainable=True, dtype=tf.float64)
-#         self.b_sigma = self.add_weight(shape=(out_features,),
-#                                        initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(out_features)),
-#                                        trainable=True, dtype=tf.float64)
-
-        
-#         self.reset_noise()
-        
-#     def reset_noise(self):
-#         """Make new noise."""
-#         epsilon_in = tf.reshape(self.scale_noise(self.in_features), [self.in_features, 1])
-#         epsilon_out = tf.reshape(self.scale_noise(self.out_features), [1, self.out_features])
-
-#         # outer product
-#         self.w_eps = epsilon_in * epsilon_out
-#         self.b_eps = tf.reshape(epsilon_out, [self.out_features])
-    
-#     def call(self, inputs):
-#         w = self.w_mu + self.w_eps * self.w_sigma
-#         b = self.b_mu + self.b_eps * self.b_sigma
-        
-#         return tf.matmul(inputs, w) + b
-        
-#     @staticmethod
-#     def scale_noise(size: int):
-#         """Set scale to make noise (factorized gaussian noise)."""
-#         x = tf.random.normal([size], dtype = tf.float64)
-        
-#         return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
-
 class NoisyLinear(tf.keras.layers.Layer):
 
-    def __init__(self, input_dim=32, units=32, std_init = 0.2, name='noisy'):
+    def __init__(self, in_features=32, out_features=32, std_init = 0.2, , name='noisy'):
         super(NoisyLinear, self).__init__()
-        self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True, name=name+'w_mu')
-        self.w_sigma = self.add_weight(shape=(input_dim, units),
-                                       initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True, name=name+'w_sigma')
         
-        self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True, name=name+'b_mu')
-        self.b_sigma = self.add_weight(shape=(units,),
-                                       initializer=tf.keras.initializers.Constant(value=0.017),
-                                       trainable=True, name=name+'b_sigma')
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        mu_range = 1 / math.sqrt(in_features)
+        
+        self.w_mu = self.add_weight(shape=(in_features, out_features),
+                                    initializer=tf.random_uniform_initializer(-mu_range,mu_range),
+                                    trainable=True, dtype=tf.float64, name=name+'w_mu')
+        self.w_sigma = self.add_weight(shape=(in_features, out_features),
+                                       initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(in_features)),
+                                       trainable=True, dtype=tf.float64, name=name+'w_sigma')
+        
+        self.b_mu = self.add_weight(shape=(out_features,),
+                                    initializer=tf.random_uniform_initializer(-mu_range,mu_range),
+                                    trainable=True, dtype=tf.float64, name=name+'b_mu')
+        self.b_sigma = self.add_weight(shape=(out_features,),
+                                       initializer=tf.keras.initializers.Constant(value=std_init / math.sqrt(out_features)),
+                                       trainable=True, dtype=tf.float64, name=name+'b_sigma')
 
+        
+        self.reset_noise()
+        
+    def reset_noise(self):
+        """Make new noise."""
+        epsilon_in = tf.reshape(self.scale_noise(self.in_features), [self.in_features, 1])
+        epsilon_out = tf.reshape(self.scale_noise(self.out_features), [1, self.out_features])
+
+        # outer product
+        self.w_eps = epsilon_in * epsilon_out
+        self.b_eps = tf.reshape(epsilon_out, [self.out_features])
     
     def call(self, inputs):
-        w_eps = tf.keras.backend.random_normal(self.w_mu.shape)
-        w = self.w_mu + w_eps * self.w_sigma
-        
-        b_eps = tf.keras.backend.random_normal(self.b_mu.shape)
-        b = self.b_mu + b_eps * self.b_sigma
+        w = self.w_mu + self.w_eps * self.w_sigma
+        b = self.b_mu + self.b_eps * self.b_sigma
         
         return tf.matmul(inputs, w) + b
+        
+    @staticmethod
+    def scale_noise(size: int):
+        """Set scale to make noise (factorized gaussian noise)."""
+        x = tf.random.normal([size], dtype = tf.float64)
+        
+        return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
+
+# class NoisyLinear(tf.keras.layers.Layer):
+
+#     def __init__(self, input_dim=32, units=32, std_init = 0.2, name='noisy'):
+#         super(NoisyLinear, self).__init__()
+#         self.w_mu = self.add_weight(shape=(input_dim, units),initializer='he_uniform',trainable=True, name=name+'w_mu')
+#         self.w_sigma = self.add_weight(shape=(input_dim, units),
+#                                        initializer=tf.keras.initializers.Constant(value=0.017),
+#                                        trainable=True, name=name+'w_sigma')
+        
+#         self.b_mu = self.add_weight(shape=(units,),initializer='zeros',trainable=True, name=name+'b_mu')
+#         self.b_sigma = self.add_weight(shape=(units,),
+#                                        initializer=tf.keras.initializers.Constant(value=0.017),
+#                                        trainable=True, name=name+'b_sigma')
+
     
-    def reset_noise(self):
-        pass
+#     def call(self, inputs, sample = False):
+        
+#         if sample:
+#             w_eps = tf.keras.backend.random_normal(self.w_mu.shape)
+#             w = self.w_mu + w_eps * self.w_sigma
+
+#             b_eps = tf.keras.backend.random_normal(self.b_mu.shape)
+#             b = self.b_mu + b_eps * self.b_sigma
+            
+#         else:
+#             w = self.w_mu
+#             b = self.b_mu
+        
+#         return tf.matmul(inputs, w) + b
+    
+#     def reset_noise(self):
+#         pass
 
     
 class DuelModel(tf.keras.models.Model):
@@ -137,15 +143,15 @@ class DuelModel(tf.keras.models.Model):
         self.atom = atom
         
 
-    def call(self, x, sample=False):
+    def call(self, x, sample=True):
         feature = tf.nn.relu(self.fc1(x))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
-        value = tf.nn.relu(self.vfc1(feature))
-        value = tf.reshape(self.vfc2(value), [-1,1,self.atom])
+        value = tf.nn.relu(self.vfc1(feature, sample))
+        value = tf.reshape(self.vfc2(value, sample), [-1,1,self.atom])
         
-        advantage = tf.nn.relu(self.afc1(feature))
-        advantage = tf.reshape(self.afc2(advantage), [-1, self.action, self.atom])
+        advantage = tf.nn.relu(self.afc1(feature, sample))
+        advantage = tf.reshape(self.afc2(advantage, sample), [-1, self.action, self.atom])
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
         dist = tf.nn.softmax(output, axis=-1)
