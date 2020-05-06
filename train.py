@@ -139,7 +139,7 @@ class DQN:
 #                 reward = 5
 
         if bar_y==ball_y:
-            reward = -1
+            reward = -3
         
         return reward
     
