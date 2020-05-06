@@ -86,7 +86,7 @@ class DuelModel(tf.keras.models.Model):
         
         output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
         dist = tf.nn.softmax(output, axis=-1)
-        dist = tf.clip_by_value(dist,1e-3, 1e8)
+#         dist = tf.clip_by_value(dist,1e-3, 1e8)
         
         return dist
     

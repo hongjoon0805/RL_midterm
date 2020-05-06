@@ -34,9 +34,9 @@ class DQN:
         self.prior_eps = 1e-6
         
         # Categorical DQN parameters
-        self.v_min = 0.0
-        self.v_max = 200.0
-        self.atom_size = 51
+        self.v_min = -10.0
+        self.v_max = 10.0
+        self.atom_size = 21
         self.support = tf.cast(tf.linspace(self.v_min, self.v_max, self.atom_size), dtype=tf.float64)
         
         # N-step Learning
@@ -52,8 +52,8 @@ class DQN:
         # memory for N-step Learning
         self.memory_n = ReplayBuffer(self.state_size, self.memory_size, self.batch_size, n_step=self.n_step, gamma=self.gamma)
         
-        self.model = OldDuelModel(self.state_size, self.action_size, std = self.std)
-        self.target_model = OldDuelModel(self.state_size, self.action_size, std = self.std)
+        self.model = DuelModel(self.state_size, self.action_size, self.atom_size, std = self.std)
+        self.target_model = DuelModel(self.state_size, self.action_size, self.atom_size, std = self.std)
         
         self.update_target_model()
         
@@ -112,23 +112,55 @@ class DQN:
         state = samples["obs"]
         next_state = samples["next_obs"]
         action = samples["acts"]
-        reward = samples["rews"]
-        done = samples["done"]
+        reward = samples["rews"].reshape(-1, 1)
+        done = samples["done"].reshape(-1, 1)
+        
+        # Categorical DQN algorithm
+        delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
 
         # Double DQN
-        next_action = tf.math.argmax(self.model(next_state), axis=1)
+        q = tf.math.reduce_sum(self.model(next_state) * self.support, axis=2)
+        next_action = tf.math.argmax(q, axis=1)
+        next_dist = self.target_model(next_state)
+        
         index = tf.stack([tf.range(self.batch_size, dtype=tf.int64), next_action], axis=0)
         index = tf.transpose(index)
-        
-        target_q = tf.gather_nd(self.target_model(next_state), index)
+        next_dist = tf.cast(tf.gather_nd(next_dist, index), dtype=tf.float64)
 
+        t_z = reward + (1 - done) * gamma * self.support
+        t_z = tf.clip_by_value(t_z, self.v_min, self.v_max)
+        b = tf.cast((t_z - self.v_min) / delta_z, dtype=tf.float64)
+        l = tf.cast(tf.math.floor(b), dtype=tf.int64)
+        u = tf.cast(tf.math.ceil(b), dtype=tf.int64)
+        
+        l_mask = tf.logical_and((u > 0), (l == u))
+        u_mask = tf.logical_and((l < (self.atom_size - 1)), (l == u))
+        l = tf.where(l_mask, l - 1, l)
+        u = tf.where(u_mask, u + 1, u)
+
+        offset = tf.linspace(0.0, float((self.batch_size - 1) * (self.atom_size )), self.batch_size)
+        offset = tf.cast(offset,dtype=tf.int64)
+        offset = tf.expand_dims(offset, 1)
+        offset = tf.broadcast_to(offset, [self.batch_size, self.atom_size])
+        
+        proj_dist = tf.reshape(tf.zeros(tf.shape(next_dist), dtype=tf.float64), [-1])
+        
+        proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
+                                             tf.reshape(l + offset, [-1,1]),
+                                             tf.reshape(next_dist * (tf.cast(u, tf.float64) - b), [-1]))
+
+        proj_dist = tf.tensor_scatter_nd_add(proj_dist, 
+                                             tf.reshape(u + offset, [-1,1]),
+                                             tf.reshape(next_dist * (b - tf.cast(l, tf.float64)), [-1]))
+        
+        proj_dist = tf.reshape(proj_dist, tf.shape(next_dist))
+
+        # indexing은 tf.gather_nd 사용하자 <-- 이거 조심. 디버깅 할 때 문제 있으면 이부분 부터 보자.
         action = tf.convert_to_tensor(action, dtype = tf.int64)
         index = tf.stack([tf.range(self.batch_size, dtype=tf.int64), action], axis=0)
         index = tf.transpose(index)
-        
-        q = tf.gather_nd(self.model(state), index)
-        
-        elementwise_loss = tf.math.square(target_q * gamma * (1-done) + reward - q)
+        log_p = tf.math.log(tf.gather_nd(self.model(state), index))
+        elementwise_loss = -tf.math.reduce_sum(proj_dist * log_p, axis = 1)
 
         return elementwise_loss
     
@@ -138,9 +170,6 @@ class DQN:
         ball_radius = 0.025
         bar_radius = 0.05
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
-#         if abs(bar_y - ball_y) == ball_radius:
-#             if ball_x in bar_coord:
-#                 reward = 5
 
         if bar_y==ball_y:
             reward = -3
@@ -169,7 +198,11 @@ class DQN:
         if self.random:
             return np.random.choice(range(self.action_size), 1, replace=False)[0]
         
-        selected_action = np.argmax(self.model(state))
+        dist = self.model(state)
+        
+        actions = tf.math.reduce_sum(dist * self.support, axis=2)
+        selected_action = np.argmax(actions)
+        
         self.transition = [state, selected_action]
         
         return selected_action
@@ -196,6 +229,10 @@ for ep_i in range(episodes):
         action = [dqn[0].select_action(state[0].reshape(1,10)), dqn[1].select_action(state[1].reshape(1,10))]
         next_state_n, reward_n, done_n, info = env.step(action)
         next_state_n = np.array(next_state_n, dtype=np.float64)
+        
+        print(next_state_n[0])
+        print(next_state_n[1])
+        print(aaa)
         
         if all(done_n):
             ball_x, ball_y = next_state_n[0][2:4]
