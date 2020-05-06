@@ -43,7 +43,7 @@ class DQN:
         self.n_step = 3
         
         # Noisy Network
-        self.std = 0.2
+        self.std = 0.1
         
         # PER
         # memory for 1-step Learning
@@ -81,10 +81,14 @@ class DQN:
         
         with tf.GradientTape() as tape:
             
+            # 1-step loss
+            elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
+            
             # n-step loss
             gamma = self.gamma ** self.n_step
             samples = self.memory_n.sample_batch_from_idxs(indices)
-            elementwise_loss = self._compute_dqn_loss(samples, gamma)
+            elementwise_n_loss = self._compute_dqn_loss(samples, gamma)
+            elementwise_loss += elementwise_n_loss
             
             # PER: importance sampling before average
             
@@ -201,8 +205,6 @@ for ep_i in range(episodes):
                 reward_n[1] += 1
                 
         rewards_cnt += np.array(reward_n)
-        
-#         reward_n[0] = reward_n[0] - 3*reward_n[0]
         
         next_state, reward, done = next_state_n[turn], reward_n[turn], done_n[turn]
         next_state, reward, done = dqn[turn].pre_process(next_state, reward, done)
