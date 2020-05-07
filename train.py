@@ -263,7 +263,7 @@ for ep_i in range(episodes):
         state = next_state_n
 
         # if training is ready
-        if len(dqn.memory) >= int(5e4):
+        if len(dqn.memory) >= dqn.batch_size:
             train=True
             dqn.update_model()
 
