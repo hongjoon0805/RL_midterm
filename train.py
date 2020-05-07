@@ -79,7 +79,7 @@ class DQN:
         # N-step Learning loss
         
         with tf.GradientTape() as tape:
-            
+            elementwise_loss = 0
             if self.args.add_1_step_loss:
                 # 1-step loss
                 elementwise_loss = self._compute_dqn_loss(samples, self.gamma)
