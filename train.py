@@ -171,9 +171,11 @@ class DQN:
         bar_radius = 0.05
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
         
-        if abs(bar_y - ball_y) == ball_radius:
-            if abs(bar_x - ball_x) <= bar_radius:
-                reward = 0.1
+        if self.args.no_tag == False:
+            
+            if abs(bar_y - ball_y) == ball_radius:
+                if abs(bar_x - ball_x) <= bar_radius:
+                    reward = 0.1
         
         if bar_y==ball_y:
             reward = -3
@@ -222,7 +224,7 @@ log_name = '{}_std_{}_lr_{}'.format(
 )
 
 if args.add_1_step_loss:
-    log_name += 'add_1_step_loss'
+    log_name += '_add_1_step_loss'
 
 f = open('./log/'+log_name + '.txt', 'w')
 

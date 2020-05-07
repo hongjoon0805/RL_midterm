@@ -25,9 +25,11 @@ def get_args():
     parser.add_argument('--std', type=float, default=0.1)
     
     
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.000125)
     
     parser.add_argument('--add_1_step_loss', type=bool, default=False)
+    
+    parser.add_argument('--no_tag', type=bool, default=False)
     
     args=parser.parse_args()
 

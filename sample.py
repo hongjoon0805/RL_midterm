@@ -61,20 +61,21 @@ class NoisyLinear(tf.keras.layers.Layer):
         
         return tf.math.sign(x) * tf.math.sqrt(tf.math.abs(x))
 
-class OldDuelModel(tf.keras.models.Model):
-    def __init__(self, state, action, std=0.1):
-        super(OldDuelModel, self).__init__()
+class DuelModel(tf.keras.models.Model):
+    def __init__(self, state, action, atom, std):
+        super(DuelModel, self).__init__()
         self.fc1 = tf.keras.layers.Dense(128, input_dim=state, kernel_initializer='he_uniform')
         self.fc2 = tf.keras.layers.Dense(128, kernel_initializer='he_uniform')
         
         self.vfc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
-        self.vfc2 = NoisyLinear(32, 1, std_init = std, name = 'vfc2')
+        self.vfc2 = NoisyLinear(32, 1*atom, std_init = std, name = 'vfc2')
         
         self.afc1 = tf.keras.layers.Dense(32, kernel_initializer='he_uniform')
-        self.afc2 = NoisyLinear(32, action, std_init = std, name = 'afc2')
+        self.afc2 = NoisyLinear(32, action*atom, std_init = std, name = 'afc2')
         
         self.state = state
         self.action = action
+        self.atom = atom
         
 
     def call(self, x, sample=False):
@@ -82,14 +83,16 @@ class OldDuelModel(tf.keras.models.Model):
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
         value = tf.nn.relu(self.vfc1(feature))
-        value = tf.reshape(self.vfc2(value, sample), [-1,1])
+        value = tf.reshape(self.vfc2(value, sample), [-1,1,self.atom])
         
         advantage = tf.nn.relu(self.afc1(feature))
-        advantage = tf.reshape(self.afc2(advantage, sample), [-1, self.action])
+        advantage = tf.reshape(self.afc2(advantage, sample), [-1, self.action, self.atom])
         
-        output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1])
+        output = value + advantage - tf.reshape(tf.math.reduce_mean(advantage, axis=1), [-1,1, self.atom])
+        dist = tf.nn.softmax(output, axis=-1)
+#         dist = tf.clip_by_value(dist,1e-3, 1e8)
         
-        return output
+        return dist
     
     def reset_noise(self):
         """Reset all noisy layers."""
@@ -102,9 +105,7 @@ def wonjum_daeching(obs):
     old_dir_arr = ['NW', 'W', 'SW', 'SE', 'E', 'NE']
     new_dir_arr = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
     
-#     obs[0] = x - obs[0]
     obs[1] = y - obs[1]
-#     obs[2] = x - obs[2]
     obs[3] = y - obs[3]
     
     old_dir = np.argmax(obs[4:])
@@ -115,8 +116,9 @@ def wonjum_daeching(obs):
     return obs
 
 def start(mode, to_recv, to_send):
-    model = OldDuelModel(10, 3)
-    model.load_weights('PER.model')
+    model = DuelModel(10, 3, 21, 0.025)
+    model.load_weights('models/2020-05-06_std_0.025_lr_0.000125add_1_step_loss.model')
+    support = tf.cast(tf.linspace(-10.0, 10.0, 21), dtype=tf.float64)
     idx = 0 if mode == 'left' else 1
     while True: 
         obs = to_recv.get()
@@ -126,10 +128,8 @@ def start(mode, to_recv, to_send):
         obs = np.array(obs[idx])
         if mode == 'right':
             obs = wonjum_daeching(obs)
-        if mode == 'left':
-            action = np.argmax(model(obs.reshape(1,10)))
-#             action = np.random.choice(range(3), 1, replace=False)[0]
-        else:
-#             action = np.random.choice(range(3), 1, replace=False)[0]
-            action = np.argmax(model(obs.reshape(1,10)))
+        
+        actions = tf.math.reduce_sum(model(obs.reshape((1,10))) * support, axis=2)
+        action = np.argmax(actions)
+        
         to_send.put(action)
