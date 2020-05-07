@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     # studnetID 는 각 학생들 학번으로 변경 후 평가합니다..
     studentID1 = "sample"
-    studentID2 = "jaeseok"
+    studentID2 = "sample"
     left_player = __import__(studentID1)
     right_player = __import__(studentID2)
     left_p = Process(target=add_player, args=(left_player, "left", left_q1, left_q2))

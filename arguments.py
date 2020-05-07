@@ -26,10 +26,11 @@ def get_args():
     
     
     parser.add_argument('--lr', type=float, default=0.000125)
-    
     parser.add_argument('--add_1_step_loss', type=bool, default=False)
-    
     parser.add_argument('--no_tag', type=bool, default=False)
+    
+    parser.add_argument('--expert_model', type=str, default='ABCD')
+    parser.add_argument('--reward_change', type=bool, default=False)
     
     args=parser.parse_args()
 

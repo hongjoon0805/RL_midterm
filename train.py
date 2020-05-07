@@ -16,9 +16,8 @@ import arguments
 tf.keras.backend.set_floatx('float64')
     
 class DQN:
-    def __init__(self, args, mode, random = False):
+    def __init__(self, args):
         
-        self.mode_idx = 0 if mode == 'l' else 1
         self.args = args
         self.state_size = 10
         self.action_size = 3
@@ -209,10 +208,31 @@ class DQN:
         self.transition = [state, selected_action]
         
         return selected_action
+    
+    def select_random_action(self):
+        """Select an random action."""
+        
+        return np.random.choice(range(3), 1, replace=False)[0]
 
+def wonjum_daeching(obs):
+    x, y = 29/30, 39/40
+    old_dir_arr = ['NW', 'W', 'SW', 'SE', 'E', 'NE']
+    new_dir_arr = ['NE', 'E', 'SE', 'SW', 'W', 'NW']
+    
+    obs[1] = y - obs[1]
+    obs[3] = y - obs[3]
+    
+    old_dir = np.argmax(obs[4:])
+    obs[4+old_dir] = 0
+    new_dir = 5-old_dir
+    obs[4+new_dir] = 1
+    
+    return obs
+    
 env = gym.make('PongDuel-v0')
 args = arguments.get_args()
-dqn = DQN(args, 'l', False)
+dqn = DQN(args)
+dqn_expert = DQN(args)
 
 import datetime
 date = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -227,10 +247,14 @@ if args.add_1_step_loss:
     log_name += '_add_1_step_loss'
 if args.no_tag:
     log_name += '_no_tag'
+if args.expert_model != 'ABCD':
+    log_name += '_expert'
+    dqn.model.load_weights('models/' + args.expert_model)
+    dqn.target_model.load_weights('models/' + args.expert_model)
+    dqn_expert.model.load_weights('models/' + args.expert_model)
 
 f = open('./log/'+log_name + '.txt', 'w')
 
-turn = 0
 
 last_100_episode = deque(maxlen=100)
 last_100_episode_eval = deque(maxlen=100)
@@ -239,7 +263,7 @@ state = env.reset()
 frame_cnt = 0
 train = False
 best_changed = False
-best_avg = 0
+best_avg = 7.0
 episodes = int(3000)
 for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
@@ -247,9 +271,12 @@ for ep_i in range(episodes):
     state = np.array(env.reset())
     rewards_cnt = np.array([0,0], dtype=np.float64)
     
-    while not all(done_n): 
-        rand_action = np.random.choice(range(3), 1, replace=False)[0]
-        action = [dqn.select_action(state[0].reshape(1,10)), rand_action]
+    while not all(done_n):
+        if args.expert_model == 'ABCD':
+            action = [dqn.select_action(state[0].reshape(1,10)), dqn.select_random_action()]
+        else:
+            new_obs = wonjum_daeching(state[1])
+            action = [dqn.select_action(state[0].reshape(1,10)), dqn_expert.select_action(new_obs.reshape(1,10))]
         next_state_n, reward_n, done_n, info = env.step(action)
         next_state_n = np.array(next_state_n, dtype=np.float64)
         
@@ -261,6 +288,10 @@ for ep_i in range(episodes):
                 reward_n[1] += 1
                 
         rewards_cnt += np.array(reward_n)
+        
+        if args.reward_change:
+            reward_n[0] = 3 * reward_n[0]
+            reward_n[1] = 3 * reward_n[1]
         
         next_state, reward, done = next_state_n[0], reward_n[0], done_n[0]
         next_state, reward, done = dqn.pre_process(next_state, reward, done)
