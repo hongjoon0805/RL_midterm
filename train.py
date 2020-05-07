@@ -268,7 +268,7 @@ episodes = int(3000)
 for ep_i in range(episodes):
     done_n = [False for _ in range(env.n_agents)]
     env.seed(ep_i)
-    state = np.array(env.reset())
+    state = np.array(env.reset(), dtype=np.float64)
     rewards_cnt = np.array([0,0], dtype=np.float64)
     
     while not all(done_n):
