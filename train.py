@@ -225,6 +225,8 @@ log_name = '{}_std_{}_lr_{}'.format(
 
 if args.add_1_step_loss:
     log_name += '_add_1_step_loss'
+if args.no_tag:
+    log_name += '_no_tag'
 
 f = open('./log/'+log_name + '.txt', 'w')
 
