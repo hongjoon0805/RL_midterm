@@ -75,7 +75,7 @@ class DuelModel(tf.keras.models.Model):
         
 
     def call(self, x, sample=True):
-        feature = tf.nn.relu(self.fc1(x))
+        feature = tf.nn.relu(self.fc1(tf.cast(x, dtype=tf.float64)))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
         value = tf.nn.relu(self.vfc1(feature))
@@ -113,7 +113,7 @@ class OldDuelModel(tf.keras.models.Model):
         
 
     def call(self, x, sample=True):
-        feature = tf.nn.relu(self.fc1(tf.cast(x, dtype=tf.float64)))
+        feature = tf.nn.relu(self.fc1(x))
         feature = tf.cast(tf.nn.relu(self.fc2(feature)), dtype=tf.float64)
         
         value = tf.nn.relu(self.vfc1(feature))
