@@ -317,7 +317,7 @@ for ep_i in range(episodes):
                                                                            np.mean(last_100_episode_eval), 
                                                                            best_avg))
     
-    f.write('Episode:%d || Score: %d || Avg: %.2f || Eval: %d || Max: %.2f \n'%(ep_i, 
+    f.write('Episode:%d || Score: %d || Avg: %.2f || Eval: %.2f || Max: %.2f \n'%(ep_i, 
                                                                            rewards_cnt[0],
                                                                            left_avg,
                                                                            np.mean(last_100_episode_eval), 
