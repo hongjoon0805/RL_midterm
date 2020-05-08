@@ -170,14 +170,14 @@ class DQN:
         bar_radius = 0.05
         bar_coord = [bar_x-0.05, bar_x-0.025, bar_x, bar_x+0.025, bar_x+0.05]
         
-        if self.args.no_tag == False:
+#         if self.args.no_tag == False:
             
-            if abs(bar_y - ball_y) == ball_radius:
-                if abs(bar_x - ball_x) <= bar_radius:
-                    reward = 0.1
+#             if abs(bar_y - ball_y) == ball_radius:
+#                 if abs(bar_x - ball_x) <= bar_radius:
+#                     reward = 0.1
         
-        if bar_y==ball_y:
-            reward = -3
+#         if bar_y==ball_y:
+#             reward = -3
         
         return reward
     

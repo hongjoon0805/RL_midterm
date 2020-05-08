@@ -93,7 +93,8 @@ for ep_i in range(episodes):
         if args.reward_change:
             reward_n[0] = 3 * reward_n[0]
             reward_n[1] = 3 * reward_n[1]
-        
+            
+        reward_n[0] = reward_n[0] - 3* reward_n[1]
         reward, done = reward_n[0], done_n[0]
         next_state, reward, done = dqn.pre_process(next_state, reward, done)
         state = next_state
