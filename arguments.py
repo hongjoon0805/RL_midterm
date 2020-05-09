@@ -30,6 +30,7 @@ def get_args():
     parser.add_argument('--no_tag', type=bool, default=False)
     
     parser.add_argument('--expert_model', type=str, default='ABCD')
+    parser.add_argument('--finetune', type=bool, default=False)
     parser.add_argument('--reward_change', type=bool, default=False)
     
     args=parser.parse_args()
