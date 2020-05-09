@@ -35,22 +35,26 @@ def wonjum_daeching(obs):
 env = gym.make('PongDuel-v0')
 args = arguments.get_args()
 dqn = DQN(args)
-dqn_expert_model = DuelModel(12,3,args.atom_size,0.1)
-support = tf.cast(tf.linspace(args.v_min, args.v_max, args.atom_size), dtype=tf.float64)
+dqn_expert_model = DuelModel(12,3,21,0.1)
+support = tf.cast(tf.linspace(-10.0, 10.0, 21), dtype=tf.float64)
 
 import datetime
 date = datetime.datetime.now().strftime("%Y-%m-%d")
 
-log_name = '{}_std_{}_lr_{}'.format(
+log_name = '{}_std_{}_lr_{}_vmin_{}_vmax_{}'.format(
     date,
     args.std,
-    args.lr
+    args.lr,
+    args.v_min,
+    args.v_max
 )
 
 if args.add_1_step_loss:
     log_name += '_add_1_step_loss'
 if args.no_tag:
     log_name += '_no_tag'
+if args.reward_change:
+    log_name += '_reward_change'
 if args.expert_model != 'ABCD':
     log_name += '_expert'
     if args.finetune:
@@ -103,8 +107,8 @@ for ep_i in range(episodes):
         rewards_cnt += np.array(reward_n)
         
         if args.reward_change:
-            reward_n[0] = 3 * reward_n[0]
-            reward_n[1] = 3 * reward_n[1]
+            reward_n[0] = 5 * reward_n[0]
+            reward_n[1] = 5 * reward_n[1]
             
         if reward_n[1] > 0:
             reward_n[0] = -3
@@ -165,7 +169,7 @@ for ep_i in range(episodes):
                                                                            np.mean(last_100_episode_eval), 
                                                                            best_avg))
     with open('./log/'+log_name + '.txt', 'a') as f:
-        f.write('Episode:%d || Steps:%d || Score: %d || Avg: %.2f || Eval: %.2f || Max: %.2f'%(ep_i, steps,
+        f.write('Episode:%d || Steps:%d || Score: %d || Avg: %.2f || Eval: %.2f || Max: %.2f\n'%(ep_i, steps,
                                                                            rewards_cnt[0],
                                                                            left_avg,
                                                                            np.mean(last_100_episode_eval), 

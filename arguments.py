@@ -22,8 +22,7 @@ def get_args():
     parser.add_argument('--n_step', type=int, default=3) # 고정!
     
     # Noisy Network
-    parser.add_argument('--std', type=float, default=0.1)
-    
+    parser.add_argument('--std', type=float, default=0.1) # 고정!    
     
     parser.add_argument('--lr', type=float, default=0.000125)
     parser.add_argument('--add_1_step_loss', type=bool, default=False)
